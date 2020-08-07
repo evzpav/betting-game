@@ -6,7 +6,7 @@ stages:
   - deploy
   
 variables:
-  APP_NAME: netting-game
+  APP_NAME: betting-game
   
 deploy:
   stage: deploy
@@ -28,7 +28,7 @@ deploy:
 # Set MySQL:
 sudo dokku plugin:install https://github.com/dokku/dokku-mysql.git mysql
 
-export PROJECT_NAME=netting-game
+export PROJECT_NAME=betting-game
 
 export MYSQL_IMAGE="mysql"
 export MYSQL_IMAGE_VERSION="8.0"

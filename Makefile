@@ -60,7 +60,7 @@ build-local: ##@dev Build binary locally
 
 run-local: build-local ##@dev Run locally.
 	HOST=localhost \
-	PORT=5001 \
+	PORT=8787 \
 	./betting-game
 
 target: 
