@@ -10,10 +10,6 @@ VERSION  	  			= $(shell git describe --always --tags)
 NAME           			= $(shell basename $(CURDIR))
 IMAGE          			= $(NAME):$(BUILD)
 
-MYSQL_NAME				= mysqldb_$(NAME)$(PIPELINE_ID)
-NETWORK_NAME			= network_$(NAME)$(PIPELINE_ID)
-MYSQL_PASSWORD 			= mysqlpassword
-
 git-config:
 	git config --replace-all core.hooksPath .githooks
 
@@ -26,23 +22,6 @@ check-env-%:
 version: ##@other Check version.
 	@echo $(VERSION)
 
-
-build-mysql: ##@mysql build mysql docker image
-	DOCKER_BUILDKIT=1 \
-	docker build \
-	--progress=plain \
-	-t mysql_$(NAME):$(VERSION) \
-	-f ./docker/mysql/Dockerfile \
-	./docker/mysql/
-
-run-mysql: build-mysql  ##@mysql run mysql on docker
-	DOCKER_BUILDKIT=1 \
-	docker run --rm -d \
-		-v $(HOME)/Documents/mysqldata:/var/lib/mysqldata/data \
-		-p 3306:3306 \
-		--name mysql_$(NAME) \
-		-e MYSQL_ROOT_PASSWORD=$(MYSQL_PASSWORD) \
-		mysql_$(NAME):$(VERSION)
 
 env-stop: ##@environment Remove mysql container.
 	-docker rm -vf mysql_$(NAME)
@@ -57,6 +36,11 @@ build-local: ##@dev Build binary locally
 	"-X main.version=${VERSION} -X main.build=${BUILD} -X main.date=${DATE}" \
 	./cmd/server/main.go
 
+run-frontend: ## Run Vue frontend locally at port 8080
+	cd ./frontend && npm run serve
+
+build-frontend: ## Build static files for Vue
+	cd ./frontend && npm run build
 
 run-local: build-local ##@dev Run locally.
 	HOST=localhost \
@@ -74,7 +58,7 @@ target:
 		--file= .
 
 build: ##@build Build image.
-	make target TARGET=build
+	make target TARGET=image
 
 run-docker: build ##@docker Run docker container.
 	docker run --rm \
