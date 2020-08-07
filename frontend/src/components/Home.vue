@@ -4,6 +4,10 @@
     <button @click="observe()">Observe</button>
     <button @click="play()">Play</button>
     <div v-if="isPlayer">
+      <div>
+        <label for="name">Name:</label>
+        <input type="text" name="name" id="name" v-model="name" required>
+      </div>
       <div v-for="i in 10" :key="i">
         <button @click="selectNumber(i)" :disabled="setNumberButtonDisabled(i)">{{i}}</button>
       </div>
@@ -24,14 +28,8 @@
 import { getTest, postJoinGame } from "../api";
 
 export default {
-  name: "HelloWorld",
   data: () => ({
-    ws: null, // Our websocket
-    // newMsg: "", // Holds new messages to be sent to the server
-    // chatContent: "", // A running list of chat messages displayed on the screen
-    // email: null, // Email address used for grabbing an avatar
-    // username: null, // Our username
-    // joined: false, // True if email and username have been filled in
+    ws: null, 
     players: [],
     rounds: [],
     backendUrl: "localhost:8787",
@@ -39,14 +37,9 @@ export default {
     firstNumber: null,
     secondNumber: null,
     isPlayer: false,
+    name: null
   }),
   computed: {
-    // setNumberButtonDisabled(number) {
-    //   if (this.firstNumber == number){
-    //       return true
-    //   }
-    //   return false;
-    // },
   },
   created() {
     this.ws = new WebSocket("ws://" + this.backendUrl + "/api/ws");
@@ -76,7 +69,6 @@ export default {
 
       if (!this.secondNumber) {
         this.secondNumber = number;
-        //start game
         this.joinGame();
         return;
       }
@@ -93,7 +85,11 @@ export default {
       return false;
     },
     async joinGame() {
-      await postJoinGame({ numbers: [this.firstNumber, this.secondNumber] });
+      const payload = {
+        name: this.name,
+        numbers: [this.firstNumber, this.secondNumber],
+      };
+      await postJoinGame(payload);
     },
   },
 };

@@ -33,7 +33,7 @@ func main() {
 
 	// services
 	gameService := game.NewService(log)
-	go gameService.RunHub()
+	gameService.Run()
 
 	// HTTP Server
 	handler := http.NewHandler(gameService, log)

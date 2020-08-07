@@ -4,11 +4,11 @@ include .env
 .PHONY: run-local git-config version clean install lint env env-stop test cover build image tag push deploy run run-docker remove-docker image
 .DEFAULT_GOAL := help
 
-BUILD         			= $(shell git rev-parse --short HEAD)
-DATE          			= $(shell date -uIseconds)
-VERSION  	  			= $(shell git describe --always --tags)
-NAME           			= $(shell basename $(CURDIR))
-IMAGE          			= $(NAME):$(BUILD)
+BUILD       = $(shell git rev-parse --short HEAD)
+DATE        = $(shell date -uIseconds)
+VERSION  	= $(shell git describe --always --tags)
+NAME        = $(shell basename $(CURDIR))
+IMAGE       = $(NAME):$(BUILD)
 
 git-config:
 	git config --replace-all core.hooksPath .githooks

@@ -15,8 +15,9 @@ import (
 
 const (
 	minPlayersToStart = 2
-	maxRoundsPerGame  = 30
-	intervalSeconds   = 10
+	maxRoundsPerGame  = 10
+	intervalSeconds   = 3
+	magicNumber       = 21
 )
 
 type service struct {
@@ -30,13 +31,14 @@ func newHub() *domain.Hub {
 		Broadcast:  make(chan []byte),
 		Register:   make(chan *domain.Client, 2),
 		Unregister: make(chan *domain.Client),
-		Clients:    make(map[*domain.Client]domain.Player),
+		Clients:    make(map[*domain.Client]bool),
 	}
 }
 
 func newGame() *domain.Game {
 	return &domain.Game{
-		StopGame: make(chan bool),
+		StopGame:    make(chan bool),
+		PlayersChan: make(chan *domain.Player, 2),
 	}
 }
 
@@ -48,19 +50,16 @@ func NewService(log log.Logger) *service {
 	}
 }
 
+func (s *service) Run() {
+	go s.RunHub()
+	go s.WaitForPlayers()
+}
+
 func (s *service) RunHub() {
 	for {
 		select {
 		case client := <-s.hub.Register:
-
-			s.hub.Clients[client] = domain.Player{}
-
-			if len(s.hub.Clients) >= minPlayersToStart && !s.game.GameRunning {
-				fmt.Printf("players: %v\n", len(s.hub.Clients))
-
-				s.StartGame()
-			}
-
+			s.hub.Clients[client] = true
 		case client := <-s.hub.Unregister:
 			if _, ok := s.hub.Clients[client]; ok {
 				fmt.Printf("player out\n")
@@ -80,6 +79,19 @@ func (s *service) RunHub() {
 	}
 }
 
+func (s *service) WaitForPlayers() {
+	for {
+		select {
+		case p := <-s.game.PlayersChan:
+			s.game.Players = append(s.game.Players, p)
+
+			if len(s.game.Players) >= minPlayersToStart && !s.game.GameRunning {
+				s.StartGame()
+			}
+		}
+	}
+}
+
 func (s *service) Register(c *domain.Client) {
 	s.hub.Register <- c
 }
@@ -93,11 +105,8 @@ func (s *service) Broadcast(msg []byte) {
 }
 
 func (s *service) StartGame() {
-
-	fmt.Printf("Start game\n")
-
+	s.log.Debug().Send("Start game")
 	s.startCron()
-
 }
 
 func (s *service) startCron() {
@@ -111,24 +120,59 @@ func (s *service) startCron() {
 }
 
 func (s *service) runRound() {
+
 	s.game.RoundCounter++
 
-	msg := fmt.Sprintf("Round %v: %v\n", s.game.RoundCounter, randomNumber())
+	randomNumber := randomNumber()
+
+	msg := fmt.Sprintf("Round %v: %v:\n", s.game.RoundCounter, randomNumber)
 	fmt.Println(msg)
+
 	s.hub.Broadcast <- []byte(msg)
 
-	// h.gameSnapshot = append(h.gameSnapshot, msg)
+	var winner *domain.Player
+	for _, p := range s.game.Players {
+		fmt.Printf("Players: %+v\n", p)
+		score := p.ComputeScore(randomNumber)
+		if score == magicNumber {
+			winner = p
+			break
+		}
+	}
+
+	if winner != nil {
+		winner.Winners++
+		s.StopGame()
+		return
+	}
 
 	if s.game.RoundCounter == maxRoundsPerGame {
-		s.game.GameRunning = false
-		s.game.RoundCounter = 0
-		s.hub.Broadcast <- []byte("finished")
-		s.game.Cron.Stop()
-		time.Sleep(intervalSeconds * time.Second)
-		s.startCron()
+		player := s.game.ResolveWinner()
+		player.Winners++
+		fmt.Printf("winner is: %v\n", player.Name)
+		s.StopGame()
 	}
 
 }
+
+func (s *service) StopGame() {
+	s.game.Cron.Stop()
+	s.game.Reset()
+
+	s.hub.Broadcast <- []byte("finished")
+
+	time.Sleep(intervalSeconds * time.Second)
+	s.startCron()
+}
+
+// func (s *service) computeScores(n int) {
+// 	for _, p := range s.game.Players {
+// 		score := p.ComputeScore(n)
+// 		if score == 21 {
+
+// 		}
+// 	}
+// }
 
 func randomNumber() int {
 	min := 1
@@ -179,4 +223,10 @@ func (s *service) RegisterNewClient(conn *websocket.Conn) {
 
 	s.WritePump(cli)
 	s.ReadPump(cli)
+}
+
+func (s *service) Join(player domain.Player) error {
+	fmt.Println(player)
+	s.game.PlayersChan <- &player
+	return nil
 }

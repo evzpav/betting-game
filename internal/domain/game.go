@@ -2,45 +2,55 @@ package domain
 
 import (
 	"net/http"
+	"sort"
 
-	"github.com/gorilla/websocket"
 	"github.com/robfig/cron/v3"
 )
 
-type Hub struct {
-	// Registered clients.
-	Clients map[*Client]Player
-
-	// Inbound messages from the clients.
-	Broadcast chan []byte
-
-	// Register requests from the clients.
-	Register chan *Client
-
-	// Unregister requests from clients.
-	Unregister chan *Client
-}
-
-type Player struct {
-	Name    string `json:"name"`
-	Winners int    `json:"winners"`
-	Losers  int    `json:"losers"`
-}
-
 type Game struct {
-	ID          string
-	GameRunning bool
-	// GameSnapshot []string
+	ID           string
+	PlayersChan  chan *Player
+	Players      []*Player
+	GameRunning  bool
 	RoundCounter int
 	StopGame     chan bool
 	Cron         *cron.Cron
 }
 
+func (g *Game) ResolveWinner() *Player {
+	sort.SliceStable(g.Players, func(i, j int) bool {
+		a := g.Players[i]
+		b := g.Players[j]
+
+		if a.Points == b.Points {
+			if a.Numbers[1] == b.Numbers[1] {
+				if a.Numbers[0] == b.Numbers[0] {
+					return a.Name < b.Name
+				}
+
+				return a.Numbers[0] > b.Numbers[0]
+			}
+
+			return a.Numbers[1] > b.Numbers[1]
+		}
+
+		return a.Points > b.Points
+	})
+
+	return g.Players[0]
+}
+
+func (g *Game) Reset() {
+	g.GameRunning = false
+	g.RoundCounter = 0
+
+	for _, p := range g.Players {
+		p.ResetPoints()
+	}
+}
+
 type GameService interface {
 	ServeWs(w http.ResponseWriter, r *http.Request)
-	RunHub()
-	Register(c *Client)
-	Unregister(c *Client)
-	Broadcast([]byte)
-	RegisterNewClient(*websocket.Conn)
+	Run()
+	Join(Player) error
 }
