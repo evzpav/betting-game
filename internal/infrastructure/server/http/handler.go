@@ -1,10 +1,12 @@
 package http
 
 import (
+	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
 
-	"github.com/gorilla/mux"
-
+	"github.com/rs/cors"
 	"gitlab.com/evzpav/betting-game/internal/domain"
 	"gitlab.com/evzpav/betting-game/pkg/log"
 )
@@ -15,66 +17,37 @@ type handler struct {
 }
 
 func NewHandler(gameService domain.GameService, log log.Logger) http.Handler {
-	h := &handler{
-		gameService: gameService,
-		log:         log,
+	// h := &handler{
+	// 	gameService: gameService,
+	// 	log:         log,
+	// }
+
+	dir, err := os.Getwd()
+	if err != nil {
+		fmt.Printf("err: %v", err)
 	}
 
-	r := mux.NewRouter()
-	r.Use(h.logger())
+	fs := http.FileServer(http.Dir(dir + "/frontend/dist/"))
+	mux := http.NewServeMux()
 
-	// spa := spaHandler{staticPath: "frontend/dist", indexPath: "index.html"}
-	// r.PathPrefix("/").Handler(spa).Methods("GET")
-	// r.HandleFunc("/", serveHome)
-
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		h.gameService.ServeWs(w, r)
-	})
-
-	// r.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-	// 	hj, ok := w.(http.Hijacker)
-	// 	if !ok {
-	// 		fmt.Println("not ok")
-	// 		http.Error(w, "webserver doesn't support hijacking", http.StatusInternalServerError)
-	// 		return
-	// 	}
-	// 	conn, bufrw, err := hj.Hijack()
-	// 	if err != nil {
-	// 		fmt.Println("not huj")
-
-	// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 		return
-	// 	}
-	// 	// Don't forget to close the connection:
-	// 	defer conn.Close()
-	// 	bufrw.WriteString("Now we're speaking raw TCP. Say hi: ")
-	// 	bufrw.Flush()
-	// 	s, err := bufrw.ReadString('\n')
-	// 	if err != nil {
-	// 		h.log.Info().Sendf("error reading string: %v", err)
-	// 		return
-	// 	}
-	// 	fmt.Fprintf(bufrw, "You said: %q\nBye.\n", s)
-	// 	bufrw.Flush()
-
-	// 	// var upgrader = websocket.Upgrader{
-	// 	// 	ReadBufferSize:  1024,
-	// 	// 	WriteBufferSize: 1024,
-	// 	// }
-
-	// 	// conn, err := upgrader.Upgrade(hj, r, nil)
-	// 	// if err != nil {
-	// 	// 	h.log.Error().Err(err).Sendf("%v", err)
-	// 	// 	return
-	// 	// }
-
-	// 	// h.gameService.RegisterNewClient(conn)
-
-	// }).Methods("GET")
-
-	r.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/", fs)
+	mux.HandleFunc("/api/ws", gameService.ServeWs)
+	mux.HandleFunc("/api/test", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("test"))
 	})
+	mux.HandleFunc("/api/join", func(w http.ResponseWriter, r *http.Request) {
+		bs, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Error().Err(err).Sendf("%v", err)
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		fmt.Println(string(bs))
 
-	return r
+		// gameService.Join()
+	})
+
+	handler := cors.Default().Handler(mux)
+
+	return handler
+
 }

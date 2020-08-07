@@ -30,7 +30,7 @@ func newHub() *domain.Hub {
 		Broadcast:  make(chan []byte),
 		Register:   make(chan *domain.Client, 2),
 		Unregister: make(chan *domain.Client),
-		Clients:    make(map[*domain.Client]bool),
+		Clients:    make(map[*domain.Client]domain.Player),
 	}
 }
 
@@ -49,13 +49,11 @@ func NewService(log log.Logger) *service {
 }
 
 func (s *service) RunHub() {
-	fmt.Printf("s: %+v\n", s)
 	for {
 		select {
 		case client := <-s.hub.Register:
-			fmt.Printf("regisres: %+v\n", s)
 
-			s.hub.Clients[client] = true
+			s.hub.Clients[client] = domain.Player{}
 
 			if len(s.hub.Clients) >= minPlayersToStart && !s.game.GameRunning {
 				fmt.Printf("players: %v\n", len(s.hub.Clients))
@@ -145,6 +143,9 @@ func (s *service) ServeWs(w http.ResponseWriter, r *http.Request) {
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)

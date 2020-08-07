@@ -9,7 +9,7 @@ import (
 
 type Hub struct {
 	// Registered clients.
-	Clients map[*Client]bool
+	Clients map[*Client]Player
 
 	// Inbound messages from the clients.
 	Broadcast chan []byte
@@ -21,9 +21,16 @@ type Hub struct {
 	Unregister chan *Client
 }
 
+type Player struct {
+	Name    string `json:"name"`
+	Winners int    `json:"winners"`
+	Losers  int    `json:"losers"`
+}
+
 type Game struct {
-	GameRunning  bool
-	GameSnapshot []string
+	ID          string
+	GameRunning bool
+	// GameSnapshot []string
 	RoundCounter int
 	StopGame     chan bool
 	Cron         *cron.Cron
