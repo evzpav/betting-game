@@ -2,7 +2,6 @@ package domain
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"time"
 
@@ -27,6 +26,11 @@ var (
 	newline = []byte{'\n'}
 	space   = []byte{' '}
 )
+
+type Message struct {
+	MessageType string      `json:"type"`
+	Data        interface{} `json:"data"`
+}
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
@@ -65,7 +69,6 @@ func (c *Client) ReadPump(hub *Hub) {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		fmt.Printf("msg: %v\n", string(message))
 
 		c.hub.Broadcast <- message
 	}
@@ -95,11 +98,11 @@ func (c *Client) WritePump() {
 			w.Write(message)
 
 			// Add queued chat messages to the current websocket message.
-			n := len(c.Send)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(<-c.Send)
-			}
+			// n := len(c.Send)
+			// for i := 0; i < n; i++ {
+			// 	w.Write(newline)
+			// 	w.Write(<-c.Send)
+			// }
 
 			if err := w.Close(); err != nil {
 				return

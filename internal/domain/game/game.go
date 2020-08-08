@@ -1,29 +1,32 @@
 package game
 
 import (
+	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/robfig/cron/v3"
+	uuid "github.com/satori/go.uuid"
 	"gitlab.com/evzpav/betting-game/internal/domain"
 
 	"gitlab.com/evzpav/betting-game/pkg/log"
 )
 
 const (
-	minPlayersToStart = 2
-	maxRoundsPerGame  = 10
-	intervalSeconds   = 3
-	magicNumber       = 21
+	minPlayersToStart int = 2
+	maxRoundsPerGame  int = 10
+	intervalSeconds   int = 3
+	magicNumber       int = 21
 )
 
 type service struct {
-	game *domain.Game
-	hub  *domain.Hub
-	log  log.Logger
+	game        *domain.Game
+	hub         *domain.Hub
+	log         log.Logger
+	PlayersChan chan *domain.Player
+	cron        *cron.Cron
 }
 
 func newHub() *domain.Hub {
@@ -36,17 +39,15 @@ func newHub() *domain.Hub {
 }
 
 func newGame() *domain.Game {
-	return &domain.Game{
-		StopGame:    make(chan bool),
-		PlayersChan: make(chan *domain.Player, 2),
-	}
+	return &domain.Game{}
 }
 
 func NewService(log log.Logger) *service {
 	return &service{
-		game: newGame(),
-		hub:  newHub(),
-		log:  log,
+		PlayersChan: make(chan *domain.Player, 2),
+		game:        newGame(),
+		hub:         newHub(),
+		log:         log,
 	}
 }
 
@@ -62,7 +63,6 @@ func (s *service) RunHub() {
 			s.hub.Clients[client] = true
 		case client := <-s.hub.Unregister:
 			if _, ok := s.hub.Clients[client]; ok {
-				fmt.Printf("player out\n")
 				delete(s.hub.Clients, client)
 				close(client.Send)
 			}
@@ -82,12 +82,17 @@ func (s *service) RunHub() {
 func (s *service) WaitForPlayers() {
 	for {
 		select {
-		case p := <-s.game.PlayersChan:
-			s.game.Players = append(s.game.Players, p)
+		case p := <-s.PlayersChan:
+			if s.game.GameRunning {
+				s.game.Observers = append(s.game.Observers, p)
+			} else {
+				s.game.Players = append(s.game.Players, p)
 
-			if len(s.game.Players) >= minPlayersToStart && !s.game.GameRunning {
-				s.StartGame()
+				if len(s.game.Players) >= minPlayersToStart {
+					s.StartGame()
+				}
 			}
+
 		}
 	}
 }
@@ -100,8 +105,14 @@ func (s *service) Unregister(c *domain.Client) {
 	s.hub.Unregister <- c
 }
 
-func (s *service) Broadcast(msg []byte) {
-	s.hub.Broadcast <- msg
+func (s *service) Broadcast(payload interface{}) error {
+	bs, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal message: %v", err)
+	}
+
+	s.hub.Broadcast <- bs
+	return nil
 }
 
 func (s *service) StartGame() {
@@ -110,25 +121,31 @@ func (s *service) StartGame() {
 }
 
 func (s *service) startCron() {
-	s.game.Cron = cron.New(cron.WithSeconds())
-
-	s.game.Cron.AddFunc("*/1 * * * * *", s.runRound)
-
 	s.game.GameRunning = true
+	s.cron = cron.New(cron.WithSeconds())
+	everySecond := "*/1 * * * * *"
+	s.cron.AddFunc(everySecond, s.runRound)
 
-	s.game.Cron.Start()
+	s.cron.Start()
 }
 
 func (s *service) runRound() {
 
 	s.game.RoundCounter++
 
-	randomNumber := randomNumber()
+	randomNumber := s.game.GenerateRandomNumber()
 
 	msg := fmt.Sprintf("Round %v: %v:\n", s.game.RoundCounter, randomNumber)
-	fmt.Println(msg)
+	s.log.Info().Send(msg)
 
-	s.hub.Broadcast <- []byte(msg)
+	var wsMessage domain.Message
+	wsMessage.MessageType = "round"
+	wsMessage.Data = s.game
+
+	if err := s.Broadcast(wsMessage); err != nil {
+		s.log.Error().Err(err).Sendf("%v", err)
+		return
+	}
 
 	var winner *domain.Player
 	for _, p := range s.game.Players {
@@ -146,44 +163,45 @@ func (s *service) runRound() {
 		return
 	}
 
-	if s.game.RoundCounter == maxRoundsPerGame {
-		player := s.game.ResolveWinner()
-		player.Winners++
-		fmt.Printf("winner is: %v\n", player.Name)
+	if s.game.RoundCounter >= maxRoundsPerGame {
+		winner := s.game.ResolveWinner()
+		winner.Winners++
+		fmt.Printf("winner is: %v\n", winner.Name)
+
+		var wsMessage domain.Message
+		wsMessage.MessageType = "end"
+		wsMessage.Data = winner
+
+		s.Broadcast(wsMessage)
 		s.StopGame()
 	}
 
 }
 
 func (s *service) StopGame() {
-	s.game.Cron.Stop()
-	s.game.Reset()
+	s.game.GameRunning = false
+	s.cron.Stop()
 
-	s.hub.Broadcast <- []byte("finished")
+	s.ResetGame()
 
-	time.Sleep(intervalSeconds * time.Second)
+	_ = s.Broadcast("finished")
+
+	time.Sleep(time.Duration(intervalSeconds) * time.Second)
 	s.startCron()
 }
 
-// func (s *service) computeScores(n int) {
-// 	for _, p := range s.game.Players {
-// 		score := p.ComputeScore(n)
-// 		if score == 21 {
+func (s *service) ResetGame() {
+	s.game.RoundCounter = 0
+	
+	s.game.Players = append(s.game.Players, s.game.Observers...)
+	s.game.Observers = make([]*domain.Player, 0)
 
-// 		}
-// 	}
-// }
-
-func randomNumber() int {
-	min := 1
-	max := 10
-	rand.Seed(time.Now().UnixNano())
-	return rand.Intn(max+1-min) + min
+	for _, p := range s.game.Players {
+		p.ResetPoints()
+	}
 }
 
 func (s *service) ServeWs(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("serve ws")
-
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -225,8 +243,12 @@ func (s *service) RegisterNewClient(conn *websocket.Conn) {
 	s.ReadPump(cli)
 }
 
-func (s *service) Join(player domain.Player) error {
-	fmt.Println(player)
-	s.game.PlayersChan <- &player
-	return nil
+func (s *service) Join(player domain.Player) {
+	player.ID = generateNewID()
+	s.PlayersChan <- &player
+}
+
+func generateNewID() string {
+	sID := uuid.NewV4()
+	return sID.String()
 }

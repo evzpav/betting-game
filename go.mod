@@ -13,7 +13,9 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/cors v1.7.0
 	github.com/rs/zerolog v1.17.2
+	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.6.1
+	go.mongodb.org/mongo-driver v1.4.0
 	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1

@@ -1,20 +1,18 @@
 package domain
 
 import (
+	"math/rand"
 	"net/http"
 	"sort"
-
-	"github.com/robfig/cron/v3"
+	"time"
 )
 
 type Game struct {
-	ID           string
-	PlayersChan  chan *Player
-	Players      []*Player
-	GameRunning  bool
-	RoundCounter int
-	StopGame     chan bool
-	Cron         *cron.Cron
+	ID           string    `json:"id"`
+	Players      []*Player `json:"players"`
+	Observers    []*Player `json:"observers"`
+	GameRunning  bool      `json:"gameRunning"`
+	RoundCounter int       `json:"roundCounter"`
 }
 
 func (g *Game) ResolveWinner() *Player {
@@ -40,17 +38,15 @@ func (g *Game) ResolveWinner() *Player {
 	return g.Players[0]
 }
 
-func (g *Game) Reset() {
-	g.GameRunning = false
-	g.RoundCounter = 0
-
-	for _, p := range g.Players {
-		p.ResetPoints()
-	}
+func (g *Game) GenerateRandomNumber() int {
+	min := 1
+	max := 10
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(max+1-min) + min
 }
 
 type GameService interface {
 	ServeWs(w http.ResponseWriter, r *http.Request)
 	Run()
-	Join(Player) error
+	Join(Player)
 }

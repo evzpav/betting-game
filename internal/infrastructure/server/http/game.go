@@ -36,11 +36,7 @@ func (h *handler) postJoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.gameService.Join(player); err != nil {
-		h.log.Error().Err(err).Sendf("%v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	h.gameService.Join(player)
 
 	w.WriteHeader(http.StatusOK)
 }

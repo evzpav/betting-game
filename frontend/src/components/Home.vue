@@ -6,7 +6,7 @@
     <div v-if="isPlayer">
       <div>
         <label for="name">Name:</label>
-        <input type="text" name="name" id="name" v-model="name" required>
+        <input type="text" name="name" id="name" v-model="name" required />
       </div>
       <div v-for="i in 10" :key="i">
         <button @click="selectNumber(i)" :disabled="setNumberButtonDisabled(i)">{{i}}</button>
@@ -18,9 +18,13 @@
       </div>
     </div>
 
-    <!-- <div v-for="(round,i) in rounds" :key="i">
+    <div v-for="(round,i) in rounds" :key="i">
         {{round}}
-    </div>-->
+    </div>
+
+    <div v-for="player in leaderboard" :key="player.id">
+        {{player.name}} {{player.points}}
+    </div>
   </div>
 </template>
 
@@ -29,7 +33,7 @@ import { getTest, postJoinGame } from "../api";
 
 export default {
   data: () => ({
-    ws: null, 
+    ws: null,
     players: [],
     rounds: [],
     backendUrl: "localhost:8787",
@@ -37,10 +41,11 @@ export default {
     firstNumber: null,
     secondNumber: null,
     isPlayer: false,
-    name: null
+    name: null,
+    message: null,
+    leaderboard : []
   }),
-  computed: {
-  },
+  computed: {},
   created() {
     this.ws = new WebSocket("ws://" + this.backendUrl + "/api/ws");
 
@@ -49,8 +54,28 @@ export default {
     };
 
     this.ws.onmessage = (evt) => {
-      console.log(evt);
-      this.rounds.unshift(evt.data);
+      // console.log(evt);
+      const msg = evt.data;
+      // console.log(msg);
+      try {
+        const parsedMsg = JSON.parse(msg);
+        if (!parsedMsg.type) {
+          return;
+        }
+
+        switch (parsedMsg.type) {
+          case "round":
+            this.rounds.unshift(parsedMsg.data.roundCounter);
+            this.leaderboard = parsedMsg.data.players
+            break;
+          case "end":
+            this.rounds = [];
+            console.log(parsedMsg.data);
+            break;
+        }
+      } catch {
+        console.log("failed to parse json");
+      }
     };
 
     getTest();
