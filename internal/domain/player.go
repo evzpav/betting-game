@@ -6,12 +6,12 @@ import (
 )
 
 type Player struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Points  int    `json:"points"`
-	Numbers []int  `json:"numbers"`
-	Winners int    `json:"winners"`
-	Losers  int    `json:"losers"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Points      int    `json:"points"`
+	Numbers     []int  `json:"numbers"`
+	Winners     int    `json:"winners"`
+	GamesPlayed int    `json:"gamesPlayed"`
 }
 
 func (p *Player) Validate() error {

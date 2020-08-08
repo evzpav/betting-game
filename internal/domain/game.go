@@ -7,15 +7,23 @@ import (
 	"time"
 )
 
+const magicNumber int = 21
+
 type Game struct {
 	ID           string    `json:"id"`
 	Players      []*Player `json:"players"`
-	Observers    []*Player `json:"observers"`
+	Observers    []*Player `json:"_"`
 	GameRunning  bool      `json:"gameRunning"`
 	RoundCounter int       `json:"roundCounter"`
+	RandomNumber int       `json:"randomNumber"`
 }
 
 func (g *Game) ResolveWinner() *Player {
+	g.SortPlayersByPoints()
+	return g.Players[0]
+}
+
+func (g *Game) SortPlayersByPoints() {
 	sort.SliceStable(g.Players, func(i, j int) bool {
 		a := g.Players[i]
 		b := g.Players[j]
@@ -34,8 +42,42 @@ func (g *Game) ResolveWinner() *Player {
 
 		return a.Points > b.Points
 	})
+}
 
-	return g.Players[0]
+func (g *Game) SortPlayersByWinners() {
+	sort.SliceStable(g.Players, func(i, j int) bool {
+		a := g.Players[i]
+		b := g.Players[j]
+
+		if a.Winners == b.Winners {
+			return a.Name < b.Name
+		}
+
+		return a.Winners > b.Winners
+	})
+}
+
+func (g *Game) IncrementGamesPlayed() {
+	for _, p := range g.Players {
+		p.GamesPlayed++
+	}
+}
+
+func (g *Game) ComputeScores(randomNumber int) {
+	for _, p := range g.Players {
+		p.ComputeScore(randomNumber)
+	}
+}
+
+func (g *Game) ResolveWinnerByPoints() *Player {
+	var winner *Player
+	for _, p := range g.Players {
+		if p.Points == magicNumber {
+			return winner
+		}
+	}
+
+	return nil
 }
 
 func (g *Game) GenerateRandomNumber() int {
@@ -43,6 +85,23 @@ func (g *Game) GenerateRandomNumber() int {
 	max := 10
 	rand.Seed(time.Now().UnixNano())
 	return rand.Intn(max+1-min) + min
+}
+
+type GameHistory []Game
+
+type OverallRanking []Player
+
+func (or OverallRanking) SortPlayersByWinners() {
+	sort.SliceStable(or, func(i, j int) bool {
+		a := or[i]
+		b := or[j]
+
+		if a.Winners == b.Winners {
+			return a.Name < b.Name
+		}
+
+		return a.Winners > b.Winners
+	})
 }
 
 type GameService interface {

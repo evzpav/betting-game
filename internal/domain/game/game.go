@@ -18,15 +18,15 @@ const (
 	minPlayersToStart int = 2
 	maxRoundsPerGame  int = 10
 	intervalSeconds   int = 3
-	magicNumber       int = 21
 )
 
 type service struct {
-	game        *domain.Game
-	hub         *domain.Hub
-	log         log.Logger
-	PlayersChan chan *domain.Player
-	cron        *cron.Cron
+	overallRanking map[string]domain.Player
+	game           *domain.Game
+	hub            *domain.Hub
+	log            log.Logger
+	PlayersChan    chan *domain.Player
+	cron           *cron.Cron
 }
 
 func newHub() *domain.Hub {
@@ -44,10 +44,11 @@ func newGame() *domain.Game {
 
 func NewService(log log.Logger) *service {
 	return &service{
-		PlayersChan: make(chan *domain.Player, 2),
-		game:        newGame(),
-		hub:         newHub(),
-		log:         log,
+		overallRanking: make(map[string]domain.Player),
+		PlayersChan:    make(chan *domain.Player, 2),
+		game:           newGame(),
+		hub:            newHub(),
+		log:            log,
 	}
 }
 
@@ -105,8 +106,12 @@ func (s *service) Unregister(c *domain.Client) {
 	s.hub.Unregister <- c
 }
 
-func (s *service) Broadcast(payload interface{}) error {
-	bs, err := json.Marshal(payload)
+func (s *service) Broadcast(messageType string, data interface{}) error {
+	var wsMessage = domain.Message{
+		MessageType: messageType,
+		Data:        data,
+	}
+	bs, err := json.Marshal(wsMessage)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message: %v", err)
 	}
@@ -117,6 +122,11 @@ func (s *service) Broadcast(payload interface{}) error {
 
 func (s *service) StartGame() {
 	s.log.Debug().Send("Start game")
+
+	s.game.ID = generateNewID()
+
+	s.Broadcast("start", "start")
+
 	s.startCron()
 }
 
@@ -138,28 +148,18 @@ func (s *service) runRound() {
 	msg := fmt.Sprintf("Round %v: %v:\n", s.game.RoundCounter, randomNumber)
 	s.log.Info().Send(msg)
 
-	var wsMessage domain.Message
-	wsMessage.MessageType = "round"
-	wsMessage.Data = s.game
+	s.game.ComputeScores(randomNumber)
+	s.game.SortPlayersByPoints()
 
-	if err := s.Broadcast(wsMessage); err != nil {
+	if err := s.Broadcast("round", s.game); err != nil {
 		s.log.Error().Err(err).Sendf("%v", err)
 		return
 	}
 
-	var winner *domain.Player
-	for _, p := range s.game.Players {
-		fmt.Printf("Players: %+v\n", p)
-		score := p.ComputeScore(randomNumber)
-		if score == magicNumber {
-			winner = p
-			break
-		}
-	}
-
-	if winner != nil {
+	if winner := s.game.ResolveWinnerByPoints(); winner != nil {
 		winner.Winners++
-		s.StopGame()
+		s.stopGame()
+		s.Broadcast("end", winner)
 		return
 	}
 
@@ -168,23 +168,35 @@ func (s *service) runRound() {
 		winner.Winners++
 		fmt.Printf("winner is: %v\n", winner.Name)
 
-		var wsMessage domain.Message
-		wsMessage.MessageType = "end"
-		wsMessage.Data = winner
-
-		s.Broadcast(wsMessage)
-		s.StopGame()
+		s.stopGame()
+		s.Broadcast("end", winner)
 	}
 
 }
 
-func (s *service) StopGame() {
+func (s *service) stopGame() {
+	s.game.IncrementGamesPlayed()
+
+	for _, p := range s.game.Players {
+		s.overallRanking[p.ID] = *p
+	}
+
+	var ranking domain.OverallRanking
+	for _, p := range s.overallRanking {
+		ranking = append(ranking, p)
+	}
+	ranking.SortPlayersByWinners()
+	_ = s.Broadcast("overallranking", ranking)
+
+	fmt.Printf("Ranking: %v\n", s.overallRanking)
+	// s.overallRanking = append(s.overallRanking, s.game.Players...)
+
 	s.game.GameRunning = false
 	s.cron.Stop()
 
 	s.ResetGame()
 
-	_ = s.Broadcast("finished")
+	_ = s.Broadcast("finished", "finished")
 
 	time.Sleep(time.Duration(intervalSeconds) * time.Second)
 	s.startCron()
@@ -192,7 +204,7 @@ func (s *service) StopGame() {
 
 func (s *service) ResetGame() {
 	s.game.RoundCounter = 0
-	
+
 	s.game.Players = append(s.game.Players, s.game.Observers...)
 	s.game.Observers = make([]*domain.Player, 0)
 
