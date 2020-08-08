@@ -1,91 +1,53 @@
 <template>
-  <div class="hello">
-    Websocker example
-    <button @click="observe()">Observe</button>
-    <button @click="play()">Play</button>
-    <div v-if="isPlayer">
-      <div>
-        <label for="name">Name:</label>
-        <input type="text" name="name" id="name" v-model="name" required />
-      </div>
-      <div v-for="i in 10" :key="i">
-        <button @click="selectNumber(i)" :disabled="setNumberButtonDisabled(i)">{{i}}</button>
-      </div>
-      <div>
-        Numbers selected:
-        <div>{{firstNumber}}</div>
-        <div>{{secondNumber}}</div>
-      </div>
+  <div>
+    <div v-if="!isPlayer" class="container">
+      <div class="action-button play" @click="play()">Play</div>
+      <div class="action-button observe" @click="observe()">Observe</div>
     </div>
+    <div v-if="isPlayer" class="field">
+      <label class="label">Name</label>
+      <div class="control mb">
+        <input v-model="name" class="input" type="text" placeholder="John Smith" />
+      </div>
 
-    <div v-for="(round,i) in rounds" :key="i">
-        {{round}}
-    </div>
-
-    <div v-for="player in leaderboard" :key="player.id">
-        {{player.name}} {{player.points}}
+      <label class="label">Choose your lucky numbers. Select 2:</label>
+      <div class="numbers mb">
+        <button
+          type="button"
+          class="button is-black number-item"
+          v-for="i in 10"
+          :key="i"
+          @click="selectNumber(i)"
+          :disabled="setNumberButtonDisabled(i)"
+        >{{i}}</button>
+      </div>
+      <button class="button play" :class="{'is-loading': isLoading}" @click="joinGame">Join</button>
+      <div v-if="error">Could not proceed. Please contact support</div>
     </div>
   </div>
 </template>
 
 <script>
-import { getTest, postJoinGame } from "../api";
+import { postJoinGame } from "../api";
 
 export default {
   data: () => ({
-    ws: null,
-    players: [],
-    rounds: [],
-    backendUrl: "localhost:8787",
-    numbersSelected: [],
+    name: "",
+    isPlayer: false,
     firstNumber: null,
     secondNumber: null,
-    isPlayer: false,
-    name: null,
-    message: null,
-    leaderboard : []
+    isLoading: false,
+    error: false,
   }),
   computed: {},
-  created() {
-    this.ws = new WebSocket("ws://" + this.backendUrl + "/api/ws");
 
-    this.ws.onopen = function () {
-      console.log("Connected to WS");
-    };
-
-    this.ws.onmessage = (evt) => {
-      // console.log(evt);
-      const msg = evt.data;
-      // console.log(msg);
-      try {
-        const parsedMsg = JSON.parse(msg);
-        if (!parsedMsg.type) {
-          return;
-        }
-
-        switch (parsedMsg.type) {
-          case "round":
-            this.rounds.unshift(parsedMsg.data.roundCounter);
-            this.leaderboard = parsedMsg.data.players
-            break;
-          case "end":
-            this.rounds = [];
-            console.log(parsedMsg.data);
-            break;
-        }
-      } catch {
-        console.log("failed to parse json");
-      }
-    };
-
-    getTest();
-  },
   methods: {
     play() {
       this.isPlayer = true;
-      console.log("play");
     },
-    observe() {},
+    observe() {
+      this.$router.push("leaderboard");
+    },
     selectNumber(number) {
       if (!this.firstNumber) {
         this.firstNumber = number;
@@ -94,7 +56,6 @@ export default {
 
       if (!this.secondNumber) {
         this.secondNumber = number;
-        this.joinGame();
         return;
       }
     },
@@ -109,12 +70,42 @@ export default {
 
       return false;
     },
+    validateInputs() {
+      this.error = false;
+      if (!this.name || this.name.length < 4) {
+        return false;
+      }
+
+      if (!this.firstNumber || !this.secondNumber) {
+        return false;
+      }
+
+      return true;
+    },
     async joinGame() {
+      if (!this.validateInputs()) {
+        alert("invaldi");
+        return false;
+      }
+
+      const numbers = [this.firstNumber, this.secondNumber];
+      numbers.sort();
+
       const payload = {
         name: this.name,
-        numbers: [this.firstNumber, this.secondNumber],
+        numbers: numbers,
       };
-      await postJoinGame(payload);
+
+      try {
+        this.isLoading = true;
+        await postJoinGame(payload);
+        this.$router.push("leaderboard");
+      } catch (e) {
+        this.error = true;
+        console.error(e);
+      } finally {
+        this.isLoading = false;
+      }
     },
   },
 };
@@ -122,4 +113,49 @@ export default {
 
 
 <style scoped>
-</style>
+.mb {
+  margin-bottom: 20px;
+}
+
+.container {
+  display: flex;
+}
+
+.action-button {
+  color: white;
+  text-transform: uppercase;
+  font-size: 1rem;
+  font-weight: 500;
+  width: 10vw;
+  height: 10vh;
+  padding: 1.25rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 15px;
+  cursor: pointer;
+  border-radius: 6px;
+  box-shadow: 0 0.5em 1em -0.125em rgba(10, 10, 10, 0.1),
+    0 0 0 1px rgba(10, 10, 10, 0.02);
+}
+
+.play {
+  background-color: #fffe03;
+  color: black;
+}
+
+.observe {
+  background-color: black;
+  color: #fffe03;
+}
+
+.numbers {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.number-item {
+  margin: 2px;
+  width: 10px;
+}
+</style>  
