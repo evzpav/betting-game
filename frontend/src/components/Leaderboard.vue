@@ -2,29 +2,33 @@
   <div>
     <div class="content">
       <div class="card game-table">
+        <div v-if="player && player.observer">You will be able to join when new game starts.</div>
         <div v-if="!game || !game.gameRunning">Waiting for players to join.</div>
+
         <div v-if="game && game.gameRunning">
           <h4 class="title is-4">Current Game #{{game.gameCounter}}</h4>
         </div>
         <div v-if="isLoading">Loading game...</div>
+
         <div v-if="game" class="card-content">
           <div v-if="game.gameRunning && !winner" class="notification">
-            <div>Round: {{game.roundCounter}}</div>
-            <div>Number: {{game.randomNumber}}</div>
-            <br />
             <progress
               v-if="game && !winner"
               class="progress is-info"
               :value="game.roundCounter"
-              max="10"
+              :max="game.rules.maxRoundsPerGame"
             ></progress>
+            <div>Round: {{game.roundCounter}}/{{game.rules.maxRoundsPerGame}}</div>
+            <div>
+              Number:
+              <strong>{{game.randomNumber}}</strong>
+            </div>
           </div>
 
-
-          <div v-if="winner" >
+          <div v-if="winner">
             <p>New players can join now. New game commencing soon.</p>
             <progress class="progress is-small is-warning" max="100"></progress>
-            <br>
+            <br />
           </div>
 
           <div v-if="winner" class="notification is-link winner-notification">
@@ -58,8 +62,8 @@
                 <td>{{i+1}}</td>
                 <td>{{player.name}}</td>
                 <td>
-                  <span class="tag is-black">{{player.numbers[0]}}</span>
-                  <span class="tag is-black">{{player.numbers[1]}}</span>
+                  <span class="tag is-black number-tag">{{player.numbers[0]}}</span>
+                  <span class="tag is-black number-tag">{{player.numbers[1]}}</span>
                 </td>
                 <td>{{player.points}}</td>
               </tr>
@@ -136,21 +140,16 @@ export default {
 
     ws.onerror = () => {
       console.log("Cannot connect to WS");
-      this.$store.commit("setConnected", false);
-      this.leaderboard = [];
-      this.overallranking = [];
+      this.clearData();
     };
 
     ws.onclose = () => {
-      this.$store.commit("setConnected", false);
-      this.leaderboard = [];
-      this.overallranking = [];
+      this.clearData();
     };
 
     ws.onmessage = (evt) => {
-      // console.log(evt);
       const msg = evt.data;
-      // console.log(msg);
+
       try {
         const parsedMsg = JSON.parse(msg);
         if (!parsedMsg.type || !parsedMsg.data) {
@@ -163,11 +162,23 @@ export default {
             console.log("start");
             this.$store.commit("setGameStarted");
             break;
+          // case "restart":
+          //   console.log("restart");
+
+          //   break;
           case "round":
             this.winner = null;
             if (parsedMsg.data) {
               this.game = parsedMsg.data;
               this.leaderboard = parsedMsg.data.players;
+
+              const meObserver = this.leaderboard.find((player) => {
+                return this.player.id === player.id && this.player.observer;
+              });
+
+              if (!meObserver.observer) {
+                this.$store.commit("setPlayer", meObserver);
+              }
             }
 
             break;
@@ -200,7 +211,7 @@ export default {
       this.isLoading = true;
       try {
         const resp = await getGameSnapshot();
-        this.game = resp.data ? resp.data : [];
+        this.game = resp && resp.data ? resp.data : [];
       } catch (error) {
         console.log(error);
       } finally {
@@ -208,7 +219,12 @@ export default {
       }
     },
     highlightPlayer(id) {
-      return this.playerId === id ? "is-selected" : "";
+      return this.player && this.player.id === id ? "is-selected" : "";
+    },
+    clearData() {
+      this.$store.commit("setConnected", false);
+      this.leaderboard = [];
+      this.overallranking = [];
     },
   },
 };
@@ -244,5 +260,9 @@ export default {
 
 .trophy {
   color: #fffe03;
+}
+
+.number-tag {
+  margin: 1px;
 }
 </style>

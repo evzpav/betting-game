@@ -140,9 +140,14 @@ export default {
         }
 
         this.$router.push("leaderboard");
-      } catch (e) {
+      } catch (error) {
+        if (error && error.response && error.response.status === 400) {
+          this.nameError = error.response.data.message;
+          return;
+        }
+
         this.error = true;
-        console.error(e);
+        console.log(error);
       } finally {
         this.isLoading = false;
       }

@@ -17,6 +17,13 @@ type Game struct {
 	RoundCounter int       `json:"roundCounter"`
 	RandomNumber int       `json:"randomNumber"`
 	GameCounter  int       `json:"gameCounter"`
+	Rules        Rules     `json:"rules"`
+}
+
+type Rules struct {
+	MinPlayersToStart int `json:"minPlayersToStart"`
+	MaxRoundsPerGame  int `json:"maxRoundsPerGame"`
+	IntervalSeconds   int `json:"intervalSeconds"`
 }
 
 func (g *Game) ResolveWinner() *Player {
@@ -106,7 +113,7 @@ func (or OverallRanking) SortPlayersByWinners() {
 type GameService interface {
 	ServeWs(w http.ResponseWriter, r *http.Request)
 	Run()
-	Join(Player) Player
+	Join(Player) (Player, error)
 	GetRankingSnapshot() OverallRanking
 	GetGameSnapshot() Game
 }

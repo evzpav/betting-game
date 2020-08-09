@@ -9,6 +9,27 @@ import (
 	"gitlab.com/evzpav/betting-game/internal/domain"
 )
 
+type respMessage struct {
+	Message string `json:"message"`
+	Status  int    `json:"status"`
+}
+
+func ResponseBadRequest(w http.ResponseWriter, err error) {
+	var msg = respMessage{
+		Message: err.Error(),
+		Status:  http.StatusBadRequest,
+	}
+
+	bs, err := json.Marshal(msg)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusBadRequest)
+	w.Write(bs)
+}
+
 func (h *handler) serveWs(w http.ResponseWriter, r *http.Request) {
 	h.gameService.ServeWs(w, r)
 }
@@ -17,7 +38,7 @@ func (h *handler) postJoin(w http.ResponseWriter, r *http.Request) {
 	bs, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		h.log.Error().Err(err).Sendf("%v", err)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -30,11 +51,16 @@ func (h *handler) postJoin(w http.ResponseWriter, r *http.Request) {
 
 	if err := player.Validate(); err != nil {
 		h.log.Error().Err(err).Sendf("%v", err)
-		w.WriteHeader(http.StatusBadRequest)
+		ResponseBadRequest(w, err)
 		return
 	}
 
-	player = h.gameService.Join(player)
+	player, err = h.gameService.Join(player)
+	if err != nil {
+		h.log.Error().Err(err).Sendf("%v", err)
+		ResponseBadRequest(w, err)
+		return
+	}
 
 	bs, err = json.Marshal(player)
 	if err != nil {

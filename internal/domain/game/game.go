@@ -2,6 +2,7 @@ package game
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -14,14 +15,7 @@ import (
 	"gitlab.com/evzpav/betting-game/pkg/log"
 )
 
-type Rules struct {
-	minPlayersToStart int
-	maxRoundsPerGame  int
-	intervalSeconds   int
-}
-
 type service struct {
-	rules          Rules
 	overallRanking map[string]domain.Player
 	game           *domain.Game
 	hub            *domain.Hub
@@ -33,16 +27,28 @@ type service struct {
 func newHub() *domain.Hub {
 	return &domain.Hub{
 		Broadcast:  make(chan []byte),
-		Register:   make(chan *domain.Client, 2),
+		Register:   make(chan *domain.Client),
 		Unregister: make(chan *domain.Client),
 		Clients:    make(map[*domain.Client]bool),
+	}
+}
+
+func newGame(minPlayersToStart, maxRoundsPerGame, intervalSeconds int) *domain.Game {
+	rules := domain.Rules{
+		MinPlayersToStart: minPlayersToStart,
+		MaxRoundsPerGame:  maxRoundsPerGame,
+		IntervalSeconds:   intervalSeconds,
+	}
+
+	return &domain.Game{
+		Rules: rules,
 	}
 }
 
 func NewService(log log.Logger) *service {
 	return &service{
 		overallRanking: make(map[string]domain.Player),
-		PlayersChan:    make(chan *domain.Player, 2),
+		PlayersChan:    make(chan *domain.Player),
 		game:           &domain.Game{},
 		hub:            newHub(),
 		log:            log,
@@ -50,13 +56,8 @@ func NewService(log log.Logger) *service {
 }
 
 func (s *service) SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSeconds int) {
-	s.rules = Rules{
-		minPlayersToStart: minPlayersToStart,
-		maxRoundsPerGame:  maxRoundsPerGame,
-		intervalSeconds:   intervalSeconds,
-	}
-
-	s.log.Info().Sendf("Game rules: %+v", s.rules)
+	s.game = newGame(minPlayersToStart, maxRoundsPerGame, intervalSeconds)
+	s.log.Info().Sendf("Game rules: %+v", s.game.Rules)
 
 }
 
@@ -97,7 +98,7 @@ func (s *service) WaitForPlayers() {
 			} else {
 				s.game.Players = append(s.game.Players, p)
 
-				if len(s.game.Players) >= s.rules.minPlayersToStart {
+				if len(s.game.Players) >= s.game.Rules.MinPlayersToStart {
 					s.StartGame()
 				}
 			}
@@ -167,7 +168,7 @@ func (s *service) runRound() {
 
 	var winner *domain.Player
 	if winner = s.game.ResolveWinnerByPoints(); winner == nil {
-		if s.game.RoundCounter >= s.rules.maxRoundsPerGame {
+		if s.game.RoundCounter >= s.game.Rules.MaxRoundsPerGame {
 			winner = s.game.ResolveWinner()
 		}
 	}
@@ -205,7 +206,7 @@ func (s *service) stopGame() {
 
 	s.ResetGame()
 
-	time.Sleep(time.Duration(s.rules.intervalSeconds) * time.Second)
+	time.Sleep(time.Duration(s.game.Rules.IntervalSeconds) * time.Second)
 	s.startCron()
 }
 
@@ -263,16 +264,22 @@ func (s *service) RegisterNewClient(conn *websocket.Conn) {
 	s.ReadPump(cli)
 }
 
-func (s *service) Join(player domain.Player) domain.Player {
+func (s *service) Join(player domain.Player) (domain.Player, error) {
 	player.ID = generateNewID()
 
 	if s.game.GameRunning {
 		player.Observer = true
 	}
 
+	for _, p := range s.game.Players {
+		if p.Name == player.Name {
+			return domain.Player{}, errors.New("name already used")
+		}
+	}
+
 	s.PlayersChan <- &player
 
-	return player
+	return player, nil
 }
 
 func (s *service) GetRankingSnapshot() domain.OverallRanking {
