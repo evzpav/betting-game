@@ -14,13 +14,14 @@ import (
 	"gitlab.com/evzpav/betting-game/pkg/log"
 )
 
-const (
-	minPlayersToStart int = 2
-	maxRoundsPerGame  int = 10
-	intervalSeconds   int = 4
-)
+type Rules struct {
+	minPlayersToStart int
+	maxRoundsPerGame  int
+	intervalSeconds   int
+}
 
 type service struct {
+	rules          Rules
 	overallRanking map[string]domain.Player
 	game           *domain.Game
 	hub            *domain.Hub
@@ -46,6 +47,17 @@ func NewService(log log.Logger) *service {
 		hub:            newHub(),
 		log:            log,
 	}
+}
+
+func (s *service) SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSeconds int) {
+	s.rules = Rules{
+		minPlayersToStart: minPlayersToStart,
+		maxRoundsPerGame:  maxRoundsPerGame,
+		intervalSeconds:   intervalSeconds,
+	}
+
+	s.log.Info().Sendf("Game rules: %+v", s.rules)
+
 }
 
 func (s *service) Run() {
@@ -85,7 +97,7 @@ func (s *service) WaitForPlayers() {
 			} else {
 				s.game.Players = append(s.game.Players, p)
 
-				if len(s.game.Players) >= minPlayersToStart {
+				if len(s.game.Players) >= s.rules.minPlayersToStart {
 					s.StartGame()
 				}
 			}
@@ -155,7 +167,7 @@ func (s *service) runRound() {
 
 	var winner *domain.Player
 	if winner = s.game.ResolveWinnerByPoints(); winner == nil {
-		if s.game.RoundCounter >= maxRoundsPerGame {
+		if s.game.RoundCounter >= s.rules.maxRoundsPerGame {
 			winner = s.game.ResolveWinner()
 		}
 	}
@@ -193,7 +205,7 @@ func (s *service) stopGame() {
 
 	s.ResetGame()
 
-	time.Sleep(time.Duration(intervalSeconds) * time.Second)
+	time.Sleep(time.Duration(s.rules.intervalSeconds) * time.Second)
 	s.startCron()
 }
 
@@ -204,6 +216,7 @@ func (s *service) ResetGame() {
 	s.game.Observers = make([]*domain.Player, 0)
 
 	for _, p := range s.game.Players {
+		p.Observer = false
 		p.ResetPoints()
 	}
 }
@@ -250,11 +263,16 @@ func (s *service) RegisterNewClient(conn *websocket.Conn) {
 	s.ReadPump(cli)
 }
 
-func (s *service) Join(player domain.Player) string {
+func (s *service) Join(player domain.Player) domain.Player {
 	player.ID = generateNewID()
+
+	if s.game.GameRunning {
+		player.Observer = true
+	}
+
 	s.PlayersChan <- &player
 
-	return player.ID
+	return player
 }
 
 func (s *service) GetRankingSnapshot() domain.OverallRanking {

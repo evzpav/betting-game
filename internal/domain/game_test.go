@@ -11,7 +11,7 @@ func TestResolveWinner(t *testing.T) {
 
 	t.Run("check order", func(t *testing.T) {
 		g := domain.Game{
-			Players: []domain.Player{
+			Players: []*domain.Player{
 				{
 					Name:    "Harry",
 					Points:  13,
@@ -38,7 +38,7 @@ func TestResolveWinner(t *testing.T) {
 
 	t.Run("diff name - same points, same upper and lower bounds", func(t *testing.T) {
 		g := domain.Game{
-			Players: []domain.Player{
+			Players: []*domain.Player{
 				{
 					Name:    "Harry",
 					Points:  10,
@@ -63,7 +63,7 @@ func TestResolveWinner(t *testing.T) {
 
 	t.Run("diff lower - same points, same name, same upper bounds", func(t *testing.T) {
 		g := domain.Game{
-			Players: []domain.Player{
+			Players: []*domain.Player{
 				{
 					Name:    "Harry",
 					Points:  10,
@@ -88,7 +88,7 @@ func TestResolveWinner(t *testing.T) {
 
 	t.Run("diff points - same name, same bounds", func(t *testing.T) {
 		g := domain.Game{
-			Players: []domain.Player{
+			Players: []*domain.Player{
 				{
 					Name:    "Stace",
 					Points:  10,
@@ -113,7 +113,7 @@ func TestResolveWinner(t *testing.T) {
 
 	t.Run("diff upper - same name, same points, same lower", func(t *testing.T) {
 		g := domain.Game{
-			Players: []domain.Player{
+			Players: []*domain.Player{
 				{
 					Name:    "Evandro",
 					Points:  10,

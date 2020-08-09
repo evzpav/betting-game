@@ -12,6 +12,7 @@ type Player struct {
 	Numbers     []int  `json:"numbers"`
 	Winners     int    `json:"winners"`
 	GamesPlayed int    `json:"gamesPlayed"`
+	Observer    bool   `json:"observer"`
 }
 
 func (p *Player) Validate() error {

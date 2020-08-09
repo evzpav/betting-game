@@ -34,7 +34,7 @@ func (h *handler) postJoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	player.ID = h.gameService.Join(player)
+	player = h.gameService.Join(player)
 
 	bs, err = json.Marshal(player)
 	if err != nil {

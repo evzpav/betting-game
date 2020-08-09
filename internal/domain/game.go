@@ -88,8 +88,6 @@ func (g *Game) GenerateRandomNumber() int {
 	return rand.Intn(max+1-min) + min
 }
 
-type GameHistory []Game
-
 type OverallRanking []Player
 
 func (or OverallRanking) SortPlayersByWinners() {
@@ -108,7 +106,7 @@ func (or OverallRanking) SortPlayersByWinners() {
 type GameService interface {
 	ServeWs(w http.ResponseWriter, r *http.Request)
 	Run()
-	Join(Player) string
+	Join(Player) Player
 	GetRankingSnapshot() OverallRanking
 	GetGameSnapshot() Game
 }
