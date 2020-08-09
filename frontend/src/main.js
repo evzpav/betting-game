@@ -5,22 +5,18 @@ import VueRouter from "vue-router";
 Vue.use(VueRouter);
 import routes from "./routes";
 
-Vue.config.productionTip = false
 
 import "bulma/css/bulma.min.css"
 
-import VueCookies from 'vue-cookies'
-Vue.use(VueCookies)
-
 import Storage from 'vue-ls';
- 
-const options = {
+
+const storageOptions = {
   namespace: 'vuejs__', // key prefix
   name: '$session', // name variable Vue.[ls] or this.[$ls],
   storage: 'session', // storage name session, local, memory
 };
- 
-Vue.use(Storage, options);
+
+Vue.use(Storage, storageOptions);
 
 import Vuex from 'vuex'
 Vue.use(Vuex)
@@ -41,7 +37,7 @@ const store = new Vuex.Store({
       }
       console.log(Vue.$session.get("betting_game_player"))
       return Vue.$session.get("betting_game_player");
-     
+      
     },
     connected(state){
       return state.connected;
@@ -68,6 +64,7 @@ const store = new Vuex.Store({
   }
 })
 
+Vue.config.productionTip = false
 
 const router = new VueRouter({
   routes,

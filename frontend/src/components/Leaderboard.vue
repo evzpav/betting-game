@@ -8,12 +8,26 @@
         </div>
         <div v-if="isLoading">Loading game...</div>
         <div v-if="game" class="card-content">
-          <div v-if="game.gameRunning && !winner" class="notification is-info">
+          <div v-if="game.gameRunning && !winner" class="notification">
             <div>Round: {{game.roundCounter}}</div>
             <div>Number: {{game.randomNumber}}</div>
+            <br />
+            <progress
+              v-if="game && !winner"
+              class="progress is-info"
+              :value="game.roundCounter"
+              max="10"
+            ></progress>
           </div>
 
-          <div v-if="winner" class="notification is-info winner-notification">
+
+          <div v-if="winner" >
+            <p>New players can join now. New game commencing soon.</p>
+            <progress class="progress is-small is-warning" max="100"></progress>
+            <br>
+          </div>
+
+          <div v-if="winner" class="notification is-link winner-notification">
             <div>
               <div>Game winner is:</div>
               <div>
@@ -95,7 +109,7 @@
 <script>
 import trophy from "../assets/images/trophy1.svg";
 import { newWebsocket, getRankingSnapshot, getGameSnapshot } from "../api";
-import {  mapGetters } from "vuex";
+import { mapGetters } from "vuex";
 
 export default {
   data: () => ({
