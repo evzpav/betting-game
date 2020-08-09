@@ -12,7 +12,7 @@ const magicNumber int = 21
 type Game struct {
 	ID           string    `json:"id"`
 	Players      []*Player `json:"players"`
-	Observers    []*Player `json:"_"`
+	Observers    []*Player `json:"-"`
 	GameRunning  bool      `json:"gameRunning"`
 	RoundCounter int       `json:"roundCounter"`
 	RandomNumber int       `json:"randomNumber"`

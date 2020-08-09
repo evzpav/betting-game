@@ -127,6 +127,7 @@ func (s *service) StartGame() {
 }
 
 func (s *service) startCron() {
+	s.game.GameCounter++
 	s.game.GameRunning = true
 
 	s.cron = cron.New(cron.WithSeconds())
@@ -183,7 +184,6 @@ func (s *service) stopGame() {
 	s.cron.Stop()
 	s.game.GameRunning = false
 	s.game.IncrementGamesPlayed()
-	s.game.GameCounter++
 
 	ranking := s.updateOverallRanking()
 

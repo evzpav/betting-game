@@ -31,7 +31,7 @@
         >{{i}}</button>
       </div>
       <p class="help is-danger" v-if="numberError">{{numberError}}</p>
-      <button class="button is-primary" :class="{'is-loading': isLoading}" @click="joinGame">Join</button>
+      <button class="button is-success" :class="{'is-loading': isLoading}" @click="joinGame">Join</button>
       <button class="button is-secondary" @click="cancel()">Cancel</button>
       <p class="help is-danger" v-if="error">Could not proceed. Please contact support.</p>
     </div>
@@ -40,6 +40,7 @@
 
 <script>
 import { postJoinGame } from "../api";
+import { mapGetters } from "vuex";
 
 export default {
   data: () => ({
@@ -52,6 +53,12 @@ export default {
     nameError: "",
     numberError: "",
   }),
+  computed: {
+    ...mapGetters(["player"]),
+  },
+  created(){
+    console.log(this.player)
+  },
   methods: {
     play() {
       this.isPlayer = true;

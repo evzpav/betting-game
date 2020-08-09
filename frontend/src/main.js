@@ -17,6 +17,7 @@ Vue.use(Vuex)
 
 const store = new Vuex.Store({
   state: {
+    connected: false,
     player: null,
     playerId: null,
     gameRunning: false,
@@ -28,20 +29,42 @@ const store = new Vuex.Store({
         return state.playerId;
       }
 
-      return Vue.$cookies.get("betting_game_player");
+      return Vue.$cookies.get("betting_game_player_id");
     },
+    player(state) {
+      if (state.player){
+        return state.player;
+      }
+
+      const playerCookie = Vue.$cookies.get("betting_game_player");
+      console.log("Playecookie", playerCookie)
+      // if(playerCookie){
+      //   return JSON.parse(playerCookie)
+      // }
+
+      return playerCookie
+
+      // return null;
+    },
+    connected(state){
+      return state.connected;
+    }
   },
   mutations: {
+    setConnected(state, value){
+      state.connected = value;
+    },
     setPlayer(state, player){
       state.player = player;
+      Vue.$cookies.set("betting_game_player", player);
     },
     setPlayerId(state,id){
       state.playerId = id;
-      Vue.$cookies.set("betting_game_player", id);
+      Vue.$cookies.set("betting_game_player_id", id);
     },
     removePlayerId(state){
       state.playerId = null;
-      Vue.$cookies.remove("betting_game_player");
+      Vue.$cookies.remove("betting_game_player_id");
     },
     setGameStarted(state){
       state.gameStarted = true;

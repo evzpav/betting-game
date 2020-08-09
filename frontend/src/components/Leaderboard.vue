@@ -2,20 +2,24 @@
   <div>
     <div class="content">
       <div class="card game-table">
-        <div v-if="game">
+        <div v-if="!game || !game.gameRunning">Waiting for players to join.</div>
+        <div v-if="game && game.gameRunning">
           <h4 class="title is-4">Current Game #{{game.gameCounter}}</h4>
         </div>
         <div v-if="isLoading">Loading game...</div>
         <div v-if="game" class="card-content">
-          <div v-if="!game.gameRunning">Game stopped. Waiting for players to join.</div>
-
           <div v-if="game.gameRunning && !winner" class="notification is-info">
             <div>Round: {{game.roundCounter}}</div>
             <div>Number: {{game.randomNumber}}</div>
           </div>
 
           <div v-if="winner" class="notification is-info winner-notification">
-            <div>Winner is: {{winner.name}}!</div>
+            <div>
+              <div>Game winner is:</div>
+              <div>
+                <strong>{{winner.name}}!</strong>
+              </div>
+            </div>
             <img class="trophy" :src="trophy" alt="trophy" width="20" height="40" />
           </div>
 
@@ -103,11 +107,11 @@ export default {
     isLoading: false,
   }),
   computed: {
-    ...mapState(["player",  "gameStarted"]),
-    ...mapGetters(["playerId"])
+    ...mapState(["gameStarted"]),
+    ...mapGetters(["player", "playerId"]),
   },
   created() {
-    console.log(this.playerId)
+    console.log(this.playerId);
     this.loadRankingSnapshot();
     this.loadGameSnapshot();
 
@@ -115,10 +119,20 @@ export default {
 
     ws.onopen = () => {
       console.log("Connected to WS");
+      this.$store.commit("setConnected", true);
     };
 
-    ws.onerror = function () {
+    ws.onerror = () => {
       console.log("Cannot connect to WS");
+      this.$store.commit("setConnected", false);
+      this.leaderboard = [];
+      this.overallranking = [];
+    };
+
+    ws.onclose = () => {
+      this.$store.commit("setConnected", false);
+      this.leaderboard = [];
+      this.overallranking = [];
     };
 
     ws.onmessage = (evt) => {
@@ -162,7 +176,6 @@ export default {
       this.isLoading = true;
       try {
         const resp = await getRankingSnapshot();
-        console.log(resp.data);
         this.overallranking = resp.data ? resp.data : [];
       } catch (error) {
         console.log(error);
@@ -175,7 +188,6 @@ export default {
       this.isLoading = true;
       try {
         const resp = await getGameSnapshot();
-        console.log(resp.data);
         this.game = resp.data ? resp.data : [];
       } catch (error) {
         console.log(error);

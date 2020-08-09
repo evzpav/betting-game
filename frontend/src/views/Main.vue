@@ -25,7 +25,11 @@
       </div>
     </div>
     <footer id="footer">
-      <div class="content has-text-centered">
+      <div id="connection-status" class="has-text-right">
+        <p v-if="connected" class="help is-success">Connected</p>
+        <p v-else class="help is-danger">Not connected</p>
+      </div>
+      <div id="author-link" class="content has-text-centered">
         <p>
           <a href="https://github.com/evzpav">Evandro Pavei</a> - Florianópolis/Brazil - 2020
         </p>
@@ -35,10 +39,10 @@
 </template>
 
 <script>
-import { mapState } from "vuex";
+import { mapGetters } from "vuex";
 export default {
   computed: {
-    ...mapState(["player"]),
+    ...mapGetters(["player", "connected"]),
   },
 };
 </script>
@@ -54,9 +58,9 @@ export default {
 
 #footer {
   position: fixed;
-  bottom: 10px;
+  bottom: 0;
   width: 100%;
-  height: 20px;
+  height: 40px;
 }
 
 #footer p {
@@ -67,4 +71,9 @@ export default {
   padding: 10px;
   margin-bottom: 10vh;
 }
+
+#connection-status{
+
+}
+
 </style>
