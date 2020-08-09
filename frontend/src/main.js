@@ -12,6 +12,16 @@ import "bulma/css/bulma.min.css"
 import VueCookies from 'vue-cookies'
 Vue.use(VueCookies)
 
+import Storage from 'vue-ls';
+ 
+const options = {
+  namespace: 'vuejs__', // key prefix
+  name: '$session', // name variable Vue.[ls] or this.[$ls],
+  storage: 'session', // storage name session, local, memory
+};
+ 
+Vue.use(Storage, options);
+
 import Vuex from 'vuex'
 Vue.use(Vuex)
 
@@ -19,32 +29,19 @@ const store = new Vuex.Store({
   state: {
     connected: false,
     player: null,
-    playerId: null,
-    gameRunning: false,
     gameStarted: false,
   },
   getters:{
-    playerId(state) {
-      if (state.playerId){
-        return state.playerId;
-      }
-
-      return Vue.$cookies.get("betting_game_player_id");
+    gameStarted(state){
+      return state.gameStarted;
     },
     player(state) {
       if (state.player){
         return state.player;
       }
-
-      const playerCookie = Vue.$cookies.get("betting_game_player");
-      console.log("Playecookie", playerCookie)
-      // if(playerCookie){
-      //   return JSON.parse(playerCookie)
-      // }
-
-      return playerCookie
-
-      // return null;
+      console.log(Vue.$session.get("betting_game_player"))
+      return Vue.$session.get("betting_game_player");
+     
     },
     connected(state){
       return state.connected;
@@ -56,15 +53,14 @@ const store = new Vuex.Store({
     },
     setPlayer(state, player){
       state.player = player;
-      Vue.$cookies.set("betting_game_player", player);
+      Vue.$session.set("betting_game_player", player);
     },
-    setPlayerId(state,id){
-      state.playerId = id;
-      Vue.$cookies.set("betting_game_player_id", id);
-    },
-    removePlayerId(state){
-      state.playerId = null;
-      Vue.$cookies.remove("betting_game_player_id");
+    removePlayer(state){
+      state.player = null;
+      Vue.$session.remove("betting_game_player");
+      // Vue.$session.clear()
+      // Vue.$session.destroy()
+
     },
     setGameStarted(state){
       state.gameStarted = true;

@@ -56,8 +56,10 @@ export default {
   computed: {
     ...mapGetters(["player"]),
   },
-  created(){
-    console.log(this.player)
+  created() {
+    if (this.player) {
+      this.$router.push("leaderboard");
+    }
   },
   methods: {
     play() {
@@ -65,10 +67,13 @@ export default {
     },
     cancel() {
       this.isPlayer = false;
+      this.name = "";
+      this.firstNumber = null;
+      this.secondNumber = null;
+      this.clearError();
     },
     observe() {
-      this.$store.commit("setPlayer", null);
-      this.$store.commit("removePlayerId");
+      this.$store.commit("removePlayer");
       this.$router.push("leaderboard");
     },
     selectNumber(number) {
@@ -132,7 +137,6 @@ export default {
         if (resp && resp.data) {
           const player = resp.data;
           this.$store.commit("setPlayer", player);
-          this.$store.commit("setPlayerId", player.id);
         }
 
         this.$router.push("leaderboard");

@@ -95,7 +95,7 @@
 <script>
 import trophy from "../assets/images/trophy1.svg";
 import { newWebsocket, getRankingSnapshot, getGameSnapshot } from "../api";
-import { mapState, mapGetters } from "vuex";
+import {  mapGetters } from "vuex";
 
 export default {
   data: () => ({
@@ -107,11 +107,9 @@ export default {
     isLoading: false,
   }),
   computed: {
-    ...mapState(["gameStarted"]),
-    ...mapGetters(["player", "playerId"]),
+    ...mapGetters(["player", "gameStarted"]),
   },
   created() {
-    console.log(this.playerId);
     this.loadRankingSnapshot();
     this.loadGameSnapshot();
 

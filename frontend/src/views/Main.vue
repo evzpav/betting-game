@@ -10,7 +10,7 @@
         <div class="navbar-item" v-if="player">{{player.name}}</div>
         <div class="navbar-item">
           <div class="buttons">
-            <router-link to="/" tag="a" class="button is-warning">
+            <router-link v-if="!player" to="/" tag="a" class="button is-warning">
               <strong>Start</strong>
             </router-link>
 
@@ -72,8 +72,6 @@ export default {
   margin-bottom: 10vh;
 }
 
-#connection-status{
-
+#connection-status {
 }
-
 </style>
