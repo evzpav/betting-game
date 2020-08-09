@@ -31,7 +31,9 @@ func NewHandler(gameService domain.GameService, log log.Logger) http.Handler {
 
 	mux.Handle("/", fs)
 	mux.HandleFunc("/api/ws", h.serveWs)
-	mux.HandleFunc("/api/join", h.postJoin)
+	mux.HandleFunc("/api/game/join", h.postJoin)
+	mux.HandleFunc("/api/game/snapshot", h.getGameSnapshot)
+	mux.HandleFunc("/api/ranking/snapshot", h.getRankingSnapshot)
 
 	return cors.Default().Handler(mux)
 

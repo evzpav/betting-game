@@ -31,13 +31,12 @@ type service struct {
 
 func newHub() *domain.Hub {
 	return &domain.Hub{
-		Broadcast:  make(chan []byte, 30),
+		Broadcast:  make(chan []byte),
 		Register:   make(chan *domain.Client, 2),
 		Unregister: make(chan *domain.Client),
 		Clients:    make(map[*domain.Client]bool),
 	}
 }
-
 
 func NewService(log log.Logger) *service {
 	return &service{
@@ -122,7 +121,7 @@ func (s *service) StartGame() {
 
 	s.game.ID = generateNewID()
 
-	s.Broadcast(domain.StartType, "start")
+	s.Broadcast(domain.StartType, s.game.ID)
 
 	s.startCron()
 }
@@ -131,7 +130,7 @@ func (s *service) startCron() {
 	s.game.GameRunning = true
 
 	s.cron = cron.New(cron.WithSeconds())
-	everySecond := "*/2 * * * * *"
+	everySecond := "*/1 * * * * *"
 	s.cron.AddFunc(everySecond, s.runRound)
 
 	s.cron.Start()
@@ -143,7 +142,7 @@ func (s *service) runRound() {
 	randomNumber := s.game.GenerateRandomNumber()
 
 	s.game.RandomNumber = randomNumber
-	s.log.Info().Sendf("Round:%v; Number:%v", s.game.RoundCounter, randomNumber)
+	s.log.Debug().Sendf("Round:%v; Number:%v", s.game.RoundCounter, randomNumber)
 
 	s.game.ComputeScores(randomNumber)
 	s.game.SortPlayersByPoints()
@@ -162,7 +161,7 @@ func (s *service) runRound() {
 
 	if winner != nil {
 		winner.Winners++
-		
+
 		if err := s.Broadcast(domain.EndType, winner); err != nil {
 			s.log.Error().Err(err).Sendf("%v", err)
 		}
@@ -177,14 +176,7 @@ func (s *service) updateOverallRanking() domain.OverallRanking {
 		s.overallRanking[p.ID] = *p
 	}
 
-	var ranking domain.OverallRanking
-	for _, p := range s.overallRanking {
-		ranking = append(ranking, p)
-	}
-
-	ranking.SortPlayersByWinners()
-
-	return ranking
+	return s.GetRankingSnapshot()
 }
 
 func (s *service) stopGame() {
@@ -263,6 +255,20 @@ func (s *service) Join(player domain.Player) string {
 	s.PlayersChan <- &player
 
 	return player.ID
+}
+
+func (s *service) GetRankingSnapshot() domain.OverallRanking {
+	var ranking domain.OverallRanking
+	for _, p := range s.overallRanking {
+		ranking = append(ranking, p)
+	}
+
+	ranking.SortPlayersByWinners()
+	return ranking
+}
+
+func (s *service) GetGameSnapshot() domain.Game {
+	return *s.game
 }
 
 func generateNewID() string {

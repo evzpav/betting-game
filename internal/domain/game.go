@@ -109,4 +109,6 @@ type GameService interface {
 	ServeWs(w http.ResponseWriter, r *http.Request)
 	Run()
 	Join(Player) string
+	GetRankingSnapshot() OverallRanking
+	GetGameSnapshot() Game
 }

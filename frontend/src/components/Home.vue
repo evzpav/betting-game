@@ -7,7 +7,16 @@
     <div v-if="isPlayer" class="field">
       <label class="label">Name</label>
       <div class="control mb">
-        <input v-model="name" class="input" type="text" placeholder="John Smith" />
+        <input
+          v-model="name"
+          class="input"
+          :class="{'is-danger': nameError }"
+          type="text"
+          placeholder="John Smith"
+          maxlength="30"
+          @input="clearError()"
+        />
+        <p class="help is-danger" v-if="nameError">{{nameError}}</p>
       </div>
 
       <label class="label">Choose your lucky numbers. Select 2:</label>
@@ -21,8 +30,10 @@
           :disabled="setNumberButtonDisabled(i)"
         >{{i}}</button>
       </div>
+      <p class="help is-danger" v-if="numberError">{{numberError}}</p>
       <button class="button is-primary" :class="{'is-loading': isLoading}" @click="joinGame">Join</button>
-      <div v-if="error">Could not proceed. Please contact support</div>
+      <button class="button is-secondary" @click="cancel()">Cancel</button>
+      <p class="help is-danger" v-if="error">Could not proceed. Please contact support.</p>
     </div>
   </div>
 </template>
@@ -33,24 +44,28 @@ import { postJoinGame } from "../api";
 export default {
   data: () => ({
     name: "",
-    playerId: "",
     isPlayer: false,
     firstNumber: null,
     secondNumber: null,
     isLoading: false,
     error: false,
+    nameError: "",
+    numberError: "",
   }),
-  computed: {},
-
   methods: {
     play() {
       this.isPlayer = true;
     },
+    cancel() {
+      this.isPlayer = false;
+    },
     observe() {
-      this.removeCookiePlayerId();
+      this.$store.commit("setPlayer", null);
+      this.$store.commit("removePlayerId");
       this.$router.push("leaderboard");
     },
     selectNumber(number) {
+      this.numberError = "";
       if (!this.firstNumber) {
         this.firstNumber = number;
         return;
@@ -74,19 +89,24 @@ export default {
     },
     validateInputs() {
       this.error = false;
-      if (!this.name || this.name.length < 4) {
+      if (!this.name || this.name.length < 3) {
+        this.nameError = "Invalid name. Minimum 3 characters";
         return false;
       }
 
       if (!this.firstNumber || !this.secondNumber) {
+        this.numberError = "Please select 2 numbers";
         return false;
       }
 
       return true;
     },
+    clearError() {
+      this.nameError = "";
+      this.numberError = "";
+    },
     async joinGame() {
       if (!this.validateInputs()) {
-        alert("invaldi");
         return false;
       }
 
@@ -103,8 +123,9 @@ export default {
         const resp = await postJoinGame(payload);
 
         if (resp && resp.data) {
-          this.playerId = resp.data.id;
-          this.setCookiePlayerId(this.playerId);
+          const player = resp.data;
+          this.$store.commit("setPlayer", player);
+          this.$store.commit("setPlayerId", player.id);
         }
 
         this.$router.push("leaderboard");
@@ -114,15 +135,6 @@ export default {
       } finally {
         this.isLoading = false;
       }
-    },
-    getCookiePlayerId() {
-      return this.$cookies.get("betting_game_player");
-    },
-    setCookiePlayerId(id) {
-      return this.$cookies.set("betting_game_player", id);
-    },
-    removeCookiePlayerId() {
-      this.$cookies.remove("betting_game_player");
     },
   },
 };

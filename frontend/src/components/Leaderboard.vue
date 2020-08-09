@@ -1,25 +1,25 @@
 <template>
   <div>
-
     <div class="content">
       <div class="card game-table">
         <div v-if="game">
           <h4 class="title is-4">Current Game #{{game.gameCounter}}</h4>
         </div>
-        <div class="card-content">
-          <div v-if="!started">Game stopped. Waiting for players to join.</div>
+        <div v-if="isLoading">Loading game...</div>
+        <div v-if="game" class="card-content">
+          <div v-if="!game.gameRunning">Game stopped. Waiting for players to join.</div>
 
-          <div v-if="gameRunning" class="notification is-warning">
+          <div v-if="game.gameRunning && !winner" class="notification is-info">
             <div>Round: {{game.roundCounter}}</div>
             <div>Number: {{game.randomNumber}}</div>
           </div>
 
-          <div v-if="winner" class="notification is-success winner-notification">
-            <div>Winner is: {{winner.name}}</div>
+          <div v-if="winner" class="notification is-info winner-notification">
+            <div>Winner is: {{winner.name}}!</div>
             <img class="trophy" :src="trophy" alt="trophy" width="20" height="40" />
           </div>
 
-          <table class="table" v-if="gameRunning">
+          <table class="table" v-if="game.gameRunning">
             <thead>
               <tr>
                 <th>
@@ -32,7 +32,11 @@
             </thead>
 
             <tbody>
-              <tr v-for="(player,i) in leaderboard" :key="player.id" :class="highlightPlayer(player.id)">
+              <tr
+                v-for="(player,i) in leaderboard"
+                :key="player.id"
+                :class="highlightPlayer(player.id)"
+              >
                 <td>{{i+1}}</td>
                 <td>{{player.name}}</td>
                 <td>
@@ -50,6 +54,7 @@
         <div>
           <h4 class="title is-4">Overall Ranking</h4>
         </div>
+        <div v-if="isLoading">Loading ranking...</div>
         <div class="card-content" v-if="overallranking.length > 0">
           <table class="table">
             <thead>
@@ -85,31 +90,35 @@
 
 <script>
 import trophy from "../assets/images/trophy1.svg";
+import { newWebsocket, getRankingSnapshot, getGameSnapshot } from "../api";
+import { mapState, mapGetters } from "vuex";
 
 export default {
   data: () => ({
-    players: [],
-    rounds: [],
-    backendUrl: "localhost:8787",
-    numbersSelected: [],
-    message: null,
     leaderboard: [],
     overallranking: [],
-    gameRunning: false,
-    started: false,
     winner: null,
     game: null,
     trophy: trophy,
-    playerId: null,
+    isLoading: false,
   }),
-  computed: {},
+  computed: {
+    ...mapState(["player",  "gameStarted"]),
+    ...mapGetters(["playerId"])
+  },
   created() {
-    this.playerId = this.getCookiePlayerId();
+    console.log(this.playerId)
+    this.loadRankingSnapshot();
+    this.loadGameSnapshot();
 
-    const ws = new WebSocket("ws://" + this.backendUrl + "/api/ws");
+    const ws = newWebsocket();
 
-    ws.onopen = function () {
+    ws.onopen = () => {
       console.log("Connected to WS");
+    };
+
+    ws.onerror = function () {
+      console.log("Cannot connect to WS");
     };
 
     ws.onmessage = (evt) => {
@@ -126,19 +135,17 @@ export default {
         switch (parsedMsg.type) {
           case "start":
             console.log("start");
-            this.started = true;
+            this.$store.commit("setGameStarted");
             break;
           case "round":
             this.winner = null;
             if (parsedMsg.data) {
               this.game = parsedMsg.data;
-              this.gameRunning = parsedMsg.data.gameRunning;
               this.leaderboard = parsedMsg.data.players;
             }
 
             break;
           case "end":
-            this.gameRunning = false;
             this.winner = parsedMsg.data;
             break;
           case "overallranking":
@@ -151,11 +158,33 @@ export default {
     };
   },
   methods: {
+    async loadRankingSnapshot() {
+      this.isLoading = true;
+      try {
+        const resp = await getRankingSnapshot();
+        console.log(resp.data);
+        this.overallranking = resp.data ? resp.data : [];
+      } catch (error) {
+        console.log(error);
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    async loadGameSnapshot() {
+      this.isLoading = true;
+      try {
+        const resp = await getGameSnapshot();
+        console.log(resp.data);
+        this.game = resp.data ? resp.data : [];
+      } catch (error) {
+        console.log(error);
+      } finally {
+        this.isLoading = false;
+      }
+    },
     highlightPlayer(id) {
       return this.playerId === id ? "is-selected" : "";
-    },
-    getCookiePlayerId() {
-      return this.$cookies.get("betting_game_player");
     },
   },
 };

@@ -1,13 +1,21 @@
 import axios from "axios";
 import config from "../config";
 
-function getTest() {
-  return baseRequest("GET", config.apiUrl, `/test`);
+function postJoinGame(payload) {
+    return baseRequest("POST", config.apiUrl, `/game/join`, payload);
 }
 
-function postJoinGame(payload) {
-    return baseRequest("POST", config.apiUrl, `/join`, payload);
-  }
+function getRankingSnapshot() {
+  return baseRequest("GET", config.apiUrl, `/ranking/snapshot`);
+}
+
+function getGameSnapshot() {
+  return baseRequest("GET", config.apiUrl, `/game/snapshot`);
+}
+
+function newWebsocket(){
+  return  new WebSocket("ws://" + config.apiUrl + "/api/ws");
+}
 
 function baseRequest(method, url, uri, data = "") {
   return axios({
@@ -21,4 +29,4 @@ function baseRequest(method, url, uri, data = "") {
   });
 }
 
-export { getTest, postJoinGame };
+export { postJoinGame, getRankingSnapshot,getGameSnapshot, newWebsocket };

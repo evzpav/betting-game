@@ -2,11 +2,12 @@
   <div>
     <nav class="navbar" role="navigation" aria-label="main navigation">
       <div class="navbar-brand">
-        <a class="navbar-item" href="https://bulma.io">
+        <router-link to="/" tag="a" class="navbar-item">
           <h1 class="title">Betting Game</h1>
-        </a>
+        </router-link>
       </div>
       <div class="navbar-end">
+        <div class="navbar-item" v-if="player">{{player.name}}</div>
         <div class="navbar-item">
           <div class="buttons">
             <router-link to="/" tag="a" class="button is-warning">
@@ -32,6 +33,15 @@
     </footer>
   </div>
 </template>
+
+<script>
+import { mapState } from "vuex";
+export default {
+  computed: {
+    ...mapState(["player"]),
+  },
+};
+</script>
 
 <style>
 .app {
