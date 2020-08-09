@@ -27,8 +27,17 @@ var (
 	space   = []byte{' '}
 )
 
+type MessageType string
+
+const (
+	RoundType          MessageType = "round"
+	StartType          MessageType = "start"
+	EndType            MessageType = "end"
+	OverallRankingType MessageType = "overallranking"
+)
+
 type Message struct {
-	MessageType string      `json:"type"`
+	MessageType MessageType `json:"type"`
 	Data        interface{} `json:"data"`
 }
 

@@ -29,14 +29,24 @@ func (h *handler) postJoin(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println(string(bs))
 	fmt.Printf("Player: %+v\n", player)
-	
+
 	if err := player.Validate(); err != nil {
 		h.log.Error().Err(err).Sendf("%v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	h.gameService.Join(player)
+	playerID := h.gameService.Join(player)
 
+	player.ID = playerID
+	
+	bs, err = json.Marshal(player)
+	if err != nil {
+		h.log.Error().Err(err).Sendf("%v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	
 	w.WriteHeader(http.StatusOK)
+	w.Write(bs)
 }

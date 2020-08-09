@@ -17,7 +17,7 @@ import (
 const (
 	minPlayersToStart int = 2
 	maxRoundsPerGame  int = 10
-	intervalSeconds   int = 3
+	intervalSeconds   int = 4
 )
 
 type service struct {
@@ -31,22 +31,19 @@ type service struct {
 
 func newHub() *domain.Hub {
 	return &domain.Hub{
-		Broadcast:  make(chan []byte),
+		Broadcast:  make(chan []byte, 30),
 		Register:   make(chan *domain.Client, 2),
 		Unregister: make(chan *domain.Client),
 		Clients:    make(map[*domain.Client]bool),
 	}
 }
 
-func newGame() *domain.Game {
-	return &domain.Game{}
-}
 
 func NewService(log log.Logger) *service {
 	return &service{
 		overallRanking: make(map[string]domain.Player),
 		PlayersChan:    make(chan *domain.Player, 2),
-		game:           newGame(),
+		game:           &domain.Game{},
 		hub:            newHub(),
 		log:            log,
 	}
@@ -106,7 +103,7 @@ func (s *service) Unregister(c *domain.Client) {
 	s.hub.Unregister <- c
 }
 
-func (s *service) Broadcast(messageType string, data interface{}) error {
+func (s *service) Broadcast(messageType domain.MessageType, data interface{}) error {
 	var wsMessage = domain.Message{
 		MessageType: messageType,
 		Data:        data,
@@ -125,15 +122,16 @@ func (s *service) StartGame() {
 
 	s.game.ID = generateNewID()
 
-	s.Broadcast("start", "start")
+	s.Broadcast(domain.StartType, "start")
 
 	s.startCron()
 }
 
 func (s *service) startCron() {
 	s.game.GameRunning = true
+
 	s.cron = cron.New(cron.WithSeconds())
-	everySecond := "*/1 * * * * *"
+	everySecond := "*/2 * * * * *"
 	s.cron.AddFunc(everySecond, s.runRound)
 
 	s.cron.Start()
@@ -142,41 +140,39 @@ func (s *service) startCron() {
 func (s *service) runRound() {
 
 	s.game.RoundCounter++
-
 	randomNumber := s.game.GenerateRandomNumber()
 
-	msg := fmt.Sprintf("Round %v: %v:\n", s.game.RoundCounter, randomNumber)
-	s.log.Info().Send(msg)
+	s.game.RandomNumber = randomNumber
+	s.log.Info().Sendf("Round:%v; Number:%v", s.game.RoundCounter, randomNumber)
 
 	s.game.ComputeScores(randomNumber)
 	s.game.SortPlayersByPoints()
 
-	if err := s.Broadcast("round", s.game); err != nil {
+	if err := s.Broadcast(domain.RoundType, s.game); err != nil {
 		s.log.Error().Err(err).Sendf("%v", err)
 		return
 	}
 
-	if winner := s.game.ResolveWinnerByPoints(); winner != nil {
-		winner.Winners++
-		s.stopGame()
-		s.Broadcast("end", winner)
-		return
+	var winner *domain.Player
+	if winner = s.game.ResolveWinnerByPoints(); winner == nil {
+		if s.game.RoundCounter >= maxRoundsPerGame {
+			winner = s.game.ResolveWinner()
+		}
 	}
 
-	if s.game.RoundCounter >= maxRoundsPerGame {
-		winner := s.game.ResolveWinner()
+	if winner != nil {
 		winner.Winners++
-		fmt.Printf("winner is: %v\n", winner.Name)
+		
+		if err := s.Broadcast(domain.EndType, winner); err != nil {
+			s.log.Error().Err(err).Sendf("%v", err)
+		}
 
 		s.stopGame()
-		s.Broadcast("end", winner)
 	}
 
 }
 
-func (s *service) stopGame() {
-	s.game.IncrementGamesPlayed()
-
+func (s *service) updateOverallRanking() domain.OverallRanking {
 	for _, p := range s.game.Players {
 		s.overallRanking[p.ID] = *p
 	}
@@ -185,18 +181,25 @@ func (s *service) stopGame() {
 	for _, p := range s.overallRanking {
 		ranking = append(ranking, p)
 	}
+
 	ranking.SortPlayersByWinners()
-	_ = s.Broadcast("overallranking", ranking)
 
-	fmt.Printf("Ranking: %v\n", s.overallRanking)
-	// s.overallRanking = append(s.overallRanking, s.game.Players...)
+	return ranking
+}
 
-	s.game.GameRunning = false
+func (s *service) stopGame() {
 	s.cron.Stop()
+	s.game.GameRunning = false
+	s.game.IncrementGamesPlayed()
+	s.game.GameCounter++
+
+	ranking := s.updateOverallRanking()
+
+	if err := s.Broadcast(domain.OverallRankingType, ranking); err != nil {
+		s.log.Error().Err(err).Sendf("%v", err)
+	}
 
 	s.ResetGame()
-
-	_ = s.Broadcast("finished", "finished")
 
 	time.Sleep(time.Duration(intervalSeconds) * time.Second)
 	s.startCron()
@@ -243,9 +246,9 @@ func (s *service) ReadPump(cli *domain.Client) {
 	go cli.ReadPump(s.hub)
 }
 
-func (s *service) CloseSend(cli *domain.Client) {
-	close(cli.Send)
-}
+// func (s *service) CloseSend(cli *domain.Client) {
+// 	close(cli.Send)
+// }
 
 func (s *service) RegisterNewClient(conn *websocket.Conn) {
 	cli := domain.NewClient(s.hub, conn)
@@ -255,9 +258,11 @@ func (s *service) RegisterNewClient(conn *websocket.Conn) {
 	s.ReadPump(cli)
 }
 
-func (s *service) Join(player domain.Player) {
+func (s *service) Join(player domain.Player) string {
 	player.ID = generateNewID()
 	s.PlayersChan <- &player
+
+	return player.ID
 }
 
 func generateNewID() string {

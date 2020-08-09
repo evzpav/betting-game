@@ -9,6 +9,9 @@ Vue.config.productionTip = false
 
 import "bulma/css/bulma.min.css"
 
+import VueCookies from 'vue-cookies'
+Vue.use(VueCookies)
+
 const router = new VueRouter({
   routes,
   mode: "history",

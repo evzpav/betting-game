@@ -31,9 +31,6 @@ func NewHandler(gameService domain.GameService, log log.Logger) http.Handler {
 
 	mux.Handle("/", fs)
 	mux.HandleFunc("/api/ws", h.serveWs)
-	mux.HandleFunc("/api/test", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("test"))
-	})
 	mux.HandleFunc("/api/join", h.postJoin)
 
 	return cors.Default().Handler(mux)

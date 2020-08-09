@@ -1,5 +1,6 @@
 import Home from "../components/Home";
 import Leaderboard from "../components/Leaderboard";
+import Rules from "../components/Rules";
 
 export default [
   {
@@ -9,5 +10,9 @@ export default [
   {
     path: "/leaderboard",
     component: Leaderboard,
+  },
+  {
+    path: "/rules",
+    component: Rules,
   }
 ];

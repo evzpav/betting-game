@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <div v-if="!isPlayer" class="container">
+  <div class="container">
+    <div v-if="!isPlayer" class="action-buttons">
       <div class="action-button play" @click="play()">Play</div>
       <div class="action-button observe" @click="observe()">Observe</div>
     </div>
@@ -21,7 +21,7 @@
           :disabled="setNumberButtonDisabled(i)"
         >{{i}}</button>
       </div>
-      <button class="button play" :class="{'is-loading': isLoading}" @click="joinGame">Join</button>
+      <button class="button is-primary" :class="{'is-loading': isLoading}" @click="joinGame">Join</button>
       <div v-if="error">Could not proceed. Please contact support</div>
     </div>
   </div>
@@ -33,6 +33,7 @@ import { postJoinGame } from "../api";
 export default {
   data: () => ({
     name: "",
+    playerId: "",
     isPlayer: false,
     firstNumber: null,
     secondNumber: null,
@@ -46,6 +47,7 @@ export default {
       this.isPlayer = true;
     },
     observe() {
+      this.removeCookiePlayerId();
       this.$router.push("leaderboard");
     },
     selectNumber(number) {
@@ -98,7 +100,13 @@ export default {
 
       try {
         this.isLoading = true;
-        await postJoinGame(payload);
+        const resp = await postJoinGame(payload);
+
+        if (resp && resp.data) {
+          this.playerId = resp.data.id;
+          this.setCookiePlayerId(this.playerId);
+        }
+
         this.$router.push("leaderboard");
       } catch (e) {
         this.error = true;
@@ -106,6 +114,15 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+    getCookiePlayerId() {
+      return this.$cookies.get("betting_game_player");
+    },
+    setCookiePlayerId(id) {
+      return this.$cookies.set("betting_game_player", id);
+    },
+    removeCookiePlayerId() {
+      this.$cookies.remove("betting_game_player");
     },
   },
 };
@@ -119,6 +136,12 @@ export default {
 
 .container {
   display: flex;
+  margin-bottom: 20px;
+}
+
+.action-buttons {
+  display: flex;
+  margin-top: 10vh;
 }
 
 .action-button {
@@ -127,6 +150,7 @@ export default {
   font-size: 1rem;
   font-weight: 500;
   width: 10vw;
+  min-width: 100px;
   height: 10vh;
   padding: 1.25rem;
   display: flex;
