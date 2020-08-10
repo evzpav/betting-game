@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -20,7 +21,7 @@ type service struct {
 	game           *domain.Game
 	hub            *domain.Hub
 	log            log.Logger
-	PlayersChan    chan *domain.Player
+	playersChan    chan *domain.Player
 	cron           *cron.Cron
 }
 
@@ -48,7 +49,7 @@ func newGame(minPlayersToStart, maxRoundsPerGame, intervalSeconds int) *domain.G
 func NewService(log log.Logger) *service {
 	return &service{
 		overallRanking: make(map[string]domain.Player),
-		PlayersChan:    make(chan *domain.Player),
+		playersChan:    make(chan *domain.Player),
 		hub:            newHub(),
 		log:            log,
 	}
@@ -71,6 +72,7 @@ func (s *service) RunHub() {
 		case client := <-s.hub.Register:
 			s.hub.Clients[client] = true
 		case client := <-s.hub.Unregister:
+			fmt.Printf("UNREGISTER: %+v\n", s.hub.Clients)
 			if _, ok := s.hub.Clients[client]; ok {
 				delete(s.hub.Clients, client)
 				close(client.Send)
@@ -91,16 +93,17 @@ func (s *service) RunHub() {
 func (s *service) WaitForPlayers() {
 	for {
 		select {
-		case p := <-s.PlayersChan:
-			if s.game.GameRunning {
-				s.game.Observers = append(s.game.Observers, p)
-			} else {
-				s.game.Players = append(s.game.Players, p)
+		case p := <-s.playersChan:
+			s.game.Observers = append(s.game.Observers, p)
 
-				if len(s.game.Players) >= s.game.Rules.MinPlayersToStart {
+			var once sync.Once
+			canStart := func() {
+				if len(s.game.Observers) >= s.game.Rules.MinPlayersToStart {
 					s.StartGame()
 				}
 			}
+
+			once.Do(canStart)
 
 		}
 	}
@@ -131,6 +134,8 @@ func (s *service) Broadcast(messageType domain.MessageType, data interface{}) er
 
 func (s *service) StartGame() {
 	s.log.Debug().Send("Start game")
+
+	s.ResetGame()
 
 	s.game.ID = generateNewID()
 
@@ -204,9 +209,9 @@ func (s *service) stopGame() {
 		s.log.Error().Err(err).Sendf("%v", err)
 	}
 
-	s.ResetGame()
-
 	time.Sleep(time.Duration(s.game.Rules.IntervalSeconds) * time.Second)
+
+	s.ResetGame()
 	s.startCron()
 }
 
@@ -282,7 +287,7 @@ func (s *service) Join(player domain.Player) (domain.Player, error) {
 		}
 	}
 
-	s.PlayersChan <- &player
+	s.playersChan <- &player
 
 	return player, nil
 }

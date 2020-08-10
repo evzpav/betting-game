@@ -32,7 +32,7 @@
 
           <div v-if="game.winner" class="notification is-link winner-notification">
             <div>
-              <div>Game winner is:</div>
+              <div>Game #{{game.gameCounter}} winner is:</div>
               <div>
                 <strong>{{game.winner.name}}!</strong>
               </div>
