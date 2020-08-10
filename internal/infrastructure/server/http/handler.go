@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 
@@ -21,15 +20,9 @@ func NewHandler(gameService domain.GameService, log log.Logger) http.Handler {
 		log:         log,
 	}
 
-	dir, err := os.Getwd()
-	if err != nil {
-		fmt.Printf("err: %v", err)
-	}
-
-	fs := http.FileServer(http.Dir(dir + "/frontend/dist/"))
 	mux := http.NewServeMux()
 
-	mux.Handle("/", fs)
+	mux.Handle("/", h.fileServerHandler())
 	mux.HandleFunc("/api/ws", h.serveWs)
 	mux.HandleFunc("/api/game/join", h.postJoin)
 	mux.HandleFunc("/api/game/snapshot", h.getGameSnapshot)
@@ -37,4 +30,13 @@ func NewHandler(gameService domain.GameService, log log.Logger) http.Handler {
 
 	return cors.Default().Handler(mux)
 
+}
+
+func (h *handler) fileServerHandler() http.Handler {
+	dir, err := os.Getwd()
+	if err != nil {
+		h.log.Fatal().Sendf("failed to get working directory: %v", err)
+	}
+
+	return http.FileServer(http.Dir(dir + "/frontend/dist/"))
 }
