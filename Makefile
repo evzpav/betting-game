@@ -1,6 +1,6 @@
+include help.mk
 include .env
 
-.PHONY: run-local git-config version clean install lint env env-stop test cover build image tag push deploy run run-docker remove-docker image
 .DEFAULT_GOAL := help
 
 BUILD       = $(shell git rev-parse --short HEAD)
@@ -21,9 +21,8 @@ check-env-%:
 version: ##@other Check version.
 	@echo $(VERSION)
 
-
-env-stop: ##@environment Remove mysql container.
-	-docker rm -vf mysql_$(NAME)
+test: ##@dev Run unit tests locally
+	go test ./...
 
 build-local: ##@dev Build binary locally
 	-rm ./betting-game
@@ -35,10 +34,10 @@ build-local: ##@dev Build binary locally
 	"-X main.version=${VERSION} -X main.build=${BUILD} -X main.date=${DATE}" \
 	./cmd/server/main.go
 
-run-frontend: ## Run Vue frontend locally at port 8080
+run-frontend: ##@dev Run Vue frontend locally at port 8080
 	cd ./frontend && npm run serve
 
-build-frontend: ## Build static files for Vue
+build-frontend: ##@dev Build static files for Vue
 	cd ./frontend && npm run build
 
 run-local: build-local ##@dev Run locally.
@@ -56,7 +55,7 @@ target:
 		--target=$(TARGET) \
 		--file= .
 
-build: ##@build Build image.
+build: ##@docker Build docker image.
 	make target TARGET=image
 
 run-docker: build ##@docker Run docker container.
@@ -67,3 +66,4 @@ run-docker: build ##@docker Run docker container.
 		-e PORT=8888 \
 		-e LOGGER_LEVEL=debug \
 		$(IMAGE)
+

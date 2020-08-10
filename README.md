@@ -1,6 +1,7 @@
 # Betting Game
 
-It is web app with Golang backend and Vue frontend.
+It is web app made with Golang backend and Vue frontend.
+It is a betting game, where player inputs his name and chooses 2 numbers.
 
 ## Getting Started
 
@@ -16,20 +17,24 @@ It is web app with Golang backend and Vue frontend.
 	HOST
 	PORT
 	LOGGER_LEVEL
-	DATABASE_URL
 ```
 
 ### Installing and running locally
 
 ```bash
 
-#Run server locally 
+#Run server locally on port 8787
 make run-local
+
+#Run vue frontend locally 
+make run-frontenv
+# open in the browser: http://localhost:8080
 
 # or
 
-#Run on docker
+#Run on docker - it will build frontend and backend and generate a single docker image
 make run-docker
+# open in the browser: http://localhost:8888
 ```
 	
 ## Contributing
