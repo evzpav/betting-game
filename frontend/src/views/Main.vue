@@ -7,7 +7,12 @@
         </router-link>
       </div>
       <div class="navbar-end">
-        <div class="navbar-item" v-if="player">{{player.name}}</div>
+        <div class="navbar-item" v-if="player">
+          <p>{{player.name}}</p>
+          <p v-if="player.observer">
+            <small>(observing)</small>
+          </p>
+        </div>
         <div class="navbar-item">
           <div class="buttons">
             <router-link v-if="!player" to="/" tag="a" class="button is-warning">

@@ -1,10 +1,8 @@
 package domain
 
 import (
-	"math/rand"
 	"net/http"
 	"sort"
-	"time"
 )
 
 type Game struct {
@@ -87,8 +85,8 @@ func (g *Game) ResolveWinnerByPoints() *Player {
 func (g *Game) GenerateRandomNumber() int {
 	min := 1
 	max := 10
-	rand.Seed(time.Now().UnixNano())
-	return rand.Intn(max+1-min) + min
+
+	return GenerateRandomNumber(min, max+1)
 }
 
 type OverallRanking []Player

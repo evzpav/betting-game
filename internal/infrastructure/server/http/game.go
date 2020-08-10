@@ -14,7 +14,7 @@ type respMessage struct {
 	Status  int    `json:"status"`
 }
 
-func ResponseBadRequest(w http.ResponseWriter, err error) {
+func (h *handler) responseBadRequest(w http.ResponseWriter, err error) {
 	var msg = respMessage{
 		Message: err.Error(),
 		Status:  http.StatusBadRequest,
@@ -27,7 +27,9 @@ func ResponseBadRequest(w http.ResponseWriter, err error) {
 	}
 
 	w.WriteHeader(http.StatusBadRequest)
-	w.Write(bs)
+	if _, err := w.Write(bs); err != nil {
+		h.log.Error().Sendf("failed to write response: %v", err)
+	}
 }
 
 func (h *handler) serveWs(w http.ResponseWriter, r *http.Request) {
@@ -56,14 +58,14 @@ func (h *handler) postJoin(w http.ResponseWriter, r *http.Request) {
 
 	if err := player.Validate(); err != nil {
 		h.log.Error().Err(err).Sendf("%v", err)
-		ResponseBadRequest(w, err)
+		h.responseBadRequest(w, err)
 		return
 	}
 
 	player, err = h.gameService.Join(player)
 	if err != nil {
 		h.log.Error().Err(err).Sendf("%v", err)
-		ResponseBadRequest(w, err)
+		h.responseBadRequest(w, err)
 		return
 	}
 
@@ -75,7 +77,9 @@ func (h *handler) postJoin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(bs)
+	if _, err := w.Write(bs); err != nil {
+		h.log.Error().Sendf("failed to write response: %v", err)
+	}
 }
 
 func (h *handler) getRankingSnapshot(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +92,9 @@ func (h *handler) getRankingSnapshot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(bs)
+	if _, err := w.Write(bs); err != nil {
+		h.log.Error().Sendf("failed to write response: %v", err)
+	}
 }
 
 func (h *handler) getGameSnapshot(w http.ResponseWriter, r *http.Request) {
@@ -102,5 +108,7 @@ func (h *handler) getGameSnapshot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(bs)
+	if _, err := w.Write(bs); err != nil {
+		h.log.Error().Sendf("failed to write response: %v", err)
+	}
 }

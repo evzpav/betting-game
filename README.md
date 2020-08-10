@@ -36,7 +36,16 @@ make run-frontenv
 make run-docker
 # open in the browser: http://localhost:8888
 ```
-	
-## Contributing
 
-See [CONTRIBUTING](CONTRIBUTING.md) documentation for more details.
+## Starting the game
+- 2 players are needed to start the game
+1. Open the url of the project on Chrome click on "Play"
+2. Then fill your name and choose 2 numbers and click "Join"
+3. You will be waiting until another player joins.
+4. Repeat steps 1 and 2 (choosing another name, same name of another player is no allowed)
+5. Game will start
+
+When new players join when a game is running they will only observe it until next game starts, then they will join automatically
+
+
+

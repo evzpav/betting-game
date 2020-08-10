@@ -7,6 +7,27 @@ FROM base AS dependencies
 ENV GO111MODULE=on
 COPY . .
 
+# ---- Backend test dependencies ----
+FROM dependencies AS test-dependencies
+ENV GO111MODULE=on
+RUN go get -u github.com/axw/gocov/gocov && GO111MODULE=off go get -u gopkg.in/matm/v1/gocov-html
+
+# ---- Backend Test ----
+FROM test-dependencies AS test
+RUN go test -v -cpu 1 -failfast -coverprofile=coverage.out -covermode=set ./...
+RUN gocov convert coverage.out | gocov-html > /index.html
+RUN grep -v "_mock" coverage.out >> filtered_coverage.out
+RUN go tool cover -func filtered_coverage.out
+
+# ---- Backend test dependencies ----
+FROM dependencies AS lint-dependencies
+ENV GO111MODULE=on
+RUN go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+
+# ---- Lint ----
+FROM lint-dependencies AS lint
+RUN golangci-lint run -c ./.golangci.yml
+
 # ---- Backend Build ----
 FROM dependencies AS build
 ARG VERSION
@@ -41,3 +62,4 @@ FROM alpine AS image
 COPY --from=front /app/frontend/dist ./frontend/dist
 COPY --from=build /go/bin/betting-game /betting-game
 ENTRYPOINT ["/betting-game"]
+

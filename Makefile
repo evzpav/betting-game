@@ -55,6 +55,12 @@ target:
 		--target=$(TARGET) \
 		--file= .
 
+test-docker: ##@docker Run unit tests in docker
+	make target TARGET=test
+
+lint-docker: ##@docker Run linting in docker
+	make target TARGET=lint
+
 build: ##@docker Build docker image.
 	make target TARGET=image
 

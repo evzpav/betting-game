@@ -20,8 +20,8 @@ deploy:
 ```
 
 - Create project on Gitlab
-- Push project to master
-- Set env vars VM_IP and SSH_PRIVATE_KEY on Gitlab
-
+- Add remote repository to the project
+- Set env vars VM_IP (IP of VM that Dokku is installed) and SSH_PRIVATE_KEY on Gitlab
+- Push project to master (`git push origin master`)
 
 ```

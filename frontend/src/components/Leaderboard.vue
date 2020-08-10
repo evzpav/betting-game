@@ -55,7 +55,7 @@
             <progress class="progress is-small is-info" max="100"></progress>
           </div>
 
-          <table class="table" v-if="game.gameRunning && !game.winner">
+          <table class="table" v-if="game.gameRunning">
             <thead>
               <tr>
                 <th>

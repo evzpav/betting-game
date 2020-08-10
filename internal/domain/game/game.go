@@ -11,7 +11,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/robfig/cron/v3"
-	uuid "github.com/satori/go.uuid"
 	"gitlab.com/evzpav/betting-game/internal/domain"
 
 	"gitlab.com/evzpav/betting-game/pkg/log"
@@ -78,21 +77,17 @@ func (s *service) RunHub() {
 }
 
 func (s *service) WaitForPlayers() {
-	for {
-		select {
-		case p := <-s.playersChan:
-			s.game.Observers = append(s.game.Observers, p)
+	for p := range s.playersChan {
+		s.game.Observers = append(s.game.Observers, p)
 
-			var once sync.Once
-			canStart := func() {
-				if len(s.game.Observers) >= s.game.Rules.MinPlayersToStart {
-					s.StartGame()
-				}
+		var once sync.Once
+		canStart := func() {
+			if len(s.game.Observers) >= s.game.Rules.MinPlayersToStart {
+				s.StartGame()
 			}
-
-			once.Do(canStart)
-
 		}
+
+		once.Do(canStart)
 	}
 }
 
@@ -124,9 +119,12 @@ func (s *service) StartGame() {
 
 	s.ResetGame()
 
-	s.game.ID = generateNewID()
+	s.game.ID = domain.GenerateNewID()
 
-	s.Broadcast(domain.StartType, s.game.ID)
+	if err := s.Broadcast(domain.StartType, s.game.ID); err != nil {
+		s.log.Error().Err(err).Sendf("%v", err)
+		return
+	}
 
 	s.startCron()
 }
@@ -137,7 +135,10 @@ func (s *service) startCron() {
 
 	s.cron = cron.New(cron.WithSeconds())
 	everySecond := "*/1 * * * * *"
-	s.cron.AddFunc(everySecond, s.runRound)
+	_, err := s.cron.AddFunc(everySecond, s.runRound)
+	if err != nil {
+		s.log.Error().Err(err).Sendf("failed to add cron func %v", err)
+	}
 
 	s.cron.Start()
 }
@@ -234,7 +235,7 @@ func (s *service) ServeWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cli := domain.NewClient(s.hub, conn)
+	cli := domain.NewClient(s.hub, conn, s.log)
 	s.Register(cli)
 
 	s.WritePump(cli)
@@ -249,16 +250,8 @@ func (s *service) ReadPump(cli *domain.Client) {
 	go cli.ReadPump(s.hub)
 }
 
-func (s *service) RegisterNewClient(conn *websocket.Conn) {
-	cli := domain.NewClient(s.hub, conn)
-	s.Register(cli)
-
-	s.WritePump(cli)
-	s.ReadPump(cli)
-}
-
 func (s *service) Join(player domain.Player) (domain.Player, error) {
-	player.ID = generateNewID()
+	player.ID = domain.GenerateNewID()
 
 	player.Name = strings.ToLower(player.Name)
 
@@ -289,9 +282,4 @@ func (s *service) GetRankingSnapshot() domain.OverallRanking {
 
 func (s *service) GetGameSnapshot() domain.Game {
 	return *s.game
-}
-
-func generateNewID() string {
-	sID := uuid.NewV4()
-	return sID.String()
 }
