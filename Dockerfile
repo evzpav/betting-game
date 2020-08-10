@@ -1,5 +1,5 @@
 # --- Base ----
-FROM golang:1.14-stretch AS base
+FROM golang:1.13-stretch AS base
 WORKDIR $GOPATH/src/gitlab.com/betting-game
 
 # ---- Dependencies ----
