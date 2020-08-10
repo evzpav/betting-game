@@ -37,7 +37,7 @@ func (p *Player) ComputeScore(n int) int {
 	}
 
 	if n > lower && n < upper {
-		p.Points = 5 - (upper - lower)
+		p.Points += 5 - (upper - lower)
 	}
 
 	if n == lower || n == upper {

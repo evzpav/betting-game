@@ -49,16 +49,7 @@ func (g *Game) SortPlayersByPoints() {
 }
 
 func (g *Game) SortPlayersByWinners() {
-	sort.SliceStable(g.Players, func(i, j int) bool {
-		a := g.Players[i]
-		b := g.Players[j]
-
-		if a.Winners == b.Winners {
-			return a.Name < b.Name
-		}
-
-		return a.Winners > b.Winners
-	})
+	sortPlayersByWinners(g.Players)
 }
 
 func (g *Game) IncrementGamesPlayed() {
@@ -115,12 +106,17 @@ func (or OverallRanking) SortPlayersByWinners() {
 	})
 }
 
-type GameService interface {
-	ServeWs(w http.ResponseWriter, r *http.Request)
-	Run()
-	Join(Player) (Player, error)
-	GetRankingSnapshot() OverallRanking
-	GetGameSnapshot() Game
+func sortPlayersByWinners(players []*Player) {
+	sort.SliceStable(players, func(i, j int) bool {
+		a := players[i]
+		b := players[j]
+
+		if a.Winners == b.Winners {
+			return a.Name < b.Name
+		}
+
+		return a.Winners > b.Winners
+	})
 }
 
 func sortPlayersByPoints(players []*Player) {
@@ -142,4 +138,12 @@ func sortPlayersByPoints(players []*Player) {
 
 		return a.Points > b.Points
 	})
+}
+
+type GameService interface {
+	ServeWs(w http.ResponseWriter, r *http.Request)
+	Run()
+	Join(Player) (Player, error)
+	GetRankingSnapshot() OverallRanking
+	GetGameSnapshot() Game
 }
