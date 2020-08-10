@@ -42,14 +42,10 @@ type Message struct {
 	Data        interface{} `json:"data"`
 }
 
-// Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	hub *Hub
-
-	// The websocket connection.
+	id   string
+	hub  *Hub
 	conn *websocket.Conn
-
-	// Buffered channel of outbound messages.
 	Send chan []byte
 }
 
@@ -64,9 +60,9 @@ func NewClient(hub *Hub, conn *websocket.Conn) *Client {
 func (c *Client) ReadPump(hub *Hub) {
 	defer func() {
 		c.hub.Unregister <- c
-
 		c.conn.Close()
 	}()
+
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
@@ -105,14 +101,10 @@ func (c *Client) WritePump() {
 				return
 			}
 
-			w.Write(message)
-
-			// Add queued chat messages to the current websocket message.
-			// n := len(c.Send)
-			// for i := 0; i < n; i++ {
-			// 	w.Write(newline)
-			// 	w.Write(<-c.Send)
-			// }
+			_, err = w.Write(message)
+			if err != nil {
+				log.Printf("failed to write message: %v\n", err)
+			}
 
 			if err := w.Close(); err != nil {
 				return
