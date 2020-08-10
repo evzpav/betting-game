@@ -13,6 +13,7 @@ type Game struct {
 	ID           string    `json:"id"`
 	Players      []*Player `json:"players"`
 	Observers    []*Player `json:"-"`
+	Winner       *Player   `json:"winner,omitempty"`
 	GameRunning  bool      `json:"gameRunning"`
 	RoundCounter int       `json:"roundCounter"`
 	RandomNumber int       `json:"randomNumber"`

@@ -49,7 +49,6 @@ func NewService(log log.Logger) *service {
 	return &service{
 		overallRanking: make(map[string]domain.Player),
 		PlayersChan:    make(chan *domain.Player),
-		game:           &domain.Game{},
 		hub:            newHub(),
 		log:            log,
 	}
@@ -120,6 +119,7 @@ func (s *service) Broadcast(messageType domain.MessageType, data interface{}) er
 		MessageType: messageType,
 		Data:        data,
 	}
+
 	bs, err := json.Marshal(wsMessage)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message: %v", err)
@@ -175,8 +175,8 @@ func (s *service) runRound() {
 
 	if winner != nil {
 		winner.Winners++
-
-		if err := s.Broadcast(domain.EndType, winner); err != nil {
+		s.game.Winner = winner
+		if err := s.Broadcast(domain.EndType, s.game); err != nil {
 			s.log.Error().Err(err).Sendf("%v", err)
 		}
 
@@ -211,6 +211,7 @@ func (s *service) stopGame() {
 }
 
 func (s *service) ResetGame() {
+	s.game.Winner = nil
 	s.game.RoundCounter = 0
 
 	s.game.Players = append(s.game.Players, s.game.Observers...)
@@ -219,6 +220,10 @@ func (s *service) ResetGame() {
 	for _, p := range s.game.Players {
 		p.Observer = false
 		p.ResetPoints()
+	}
+
+	if err := s.Broadcast(domain.RestartType, true); err != nil {
+		s.log.Error().Err(err).Sendf("%v", err)
 	}
 }
 
@@ -273,7 +278,7 @@ func (s *service) Join(player domain.Player) (domain.Player, error) {
 
 	for _, p := range s.game.Players {
 		if p.Name == player.Name {
-			return domain.Player{}, errors.New("name already used")
+			return domain.Player{}, errors.New("name already in use")
 		}
 	}
 

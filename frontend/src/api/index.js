@@ -15,7 +15,7 @@ function getGameSnapshot() {
 
 function newWebsocket(){
   const wsId = uuidv4();
-  return  new WebSocket("ws://" + config.apiUrl + "/api/ws?=id"+ wsId);
+  return  new WebSocket(`ws://${config.apiUrl}/api/ws?id=${wsId}`);
 }
 
 function baseRequest(method, url, uri, data = "") {

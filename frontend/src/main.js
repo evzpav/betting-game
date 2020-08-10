@@ -46,6 +46,7 @@ const store = new Vuex.Store({
   mutations: {
     setConnected(state, value){
       state.connected = value;
+      Vue.$session.set("ws_conn_id", value);
     },
     setPlayer(state, player){
       state.player = player;

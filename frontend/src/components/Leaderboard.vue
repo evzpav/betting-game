@@ -11,9 +11,8 @@
         <div v-if="isLoading">Loading game...</div>
 
         <div v-if="game" class="card-content">
-          <div v-if="game.gameRunning && !winner" class="notification">
+          <div v-if="game.gameRunning && !game.winner" class="notification">
             <progress
-              v-if="game && !winner"
               class="progress is-info"
               :value="game.roundCounter"
               :max="game.rules.maxRoundsPerGame"
@@ -25,17 +24,17 @@
             </div>
           </div>
 
-          <div v-if="winner">
+          <div v-if="game.winner">
             <p>New players can join now. New game commencing soon.</p>
             <progress class="progress is-small is-warning" max="100"></progress>
             <br />
           </div>
 
-          <div v-if="winner" class="notification is-link winner-notification">
+          <div v-if="game.winner" class="notification is-link winner-notification">
             <div>
               <div>Game winner is:</div>
               <div>
-                <strong>{{winner.name}}!</strong>
+                <strong>{{game.winner.name}}!</strong>
               </div>
             </div>
             <img class="trophy" :src="trophy" alt="trophy" width="20" height="40" />
@@ -119,7 +118,6 @@ export default {
   data: () => ({
     leaderboard: [],
     overallranking: [],
-    winner: null,
     game: null,
     trophy: trophy,
     isLoading: false,
@@ -133,9 +131,15 @@ export default {
 
     const ws = newWebsocket();
 
-    ws.onopen = () => {
+    ws.onopen = (evt) => {
       console.log("Connected to WS");
-      this.$store.commit("setConnected", true);
+      const url = evt.target.url;
+
+      if (url) {
+        const id = url.split("id=");
+        this.$store.commit("setConnected", id[1]);
+        console.log(id);
+      }
     };
 
     ws.onerror = () => {
@@ -162,13 +166,11 @@ export default {
             console.log("start");
             this.$store.commit("setGameStarted");
             break;
-          // case "restart":
-          //   console.log("restart");
-
-          //   break;
+          case "restart":
+            break;
           case "round":
-            this.winner = null;
             if (parsedMsg.data) {
+              console.log(parsedMsg.data);
               this.game = parsedMsg.data;
               this.leaderboard = parsedMsg.data.players;
 
@@ -176,21 +178,22 @@ export default {
                 return this.player.id === player.id && this.player.observer;
               });
 
-              if (!meObserver.observer) {
+              if (meObserver && !meObserver.observer) {
                 this.$store.commit("setPlayer", meObserver);
               }
             }
 
             break;
           case "end":
-            this.winner = parsedMsg.data;
+            this.game = parsedMsg.data;
+            this.leaderboard = this.game.players;
             break;
           case "overallranking":
             this.overallranking = parsedMsg.data;
             break;
         }
-      } catch {
-        console.log("catch");
+      } catch (e) {
+        console.log("catch: ", e);
       }
     };
   },
@@ -212,6 +215,7 @@ export default {
       try {
         const resp = await getGameSnapshot();
         this.game = resp && resp.data ? resp.data : [];
+        this.leaderboard = this.game.players;
       } catch (error) {
         console.log(error);
       } finally {
@@ -223,6 +227,7 @@ export default {
     },
     clearData() {
       this.$store.commit("setConnected", false);
+      this.$store.commit("setPlayer", null);
       this.leaderboard = [];
       this.overallranking = [];
     },
