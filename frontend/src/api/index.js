@@ -15,14 +15,16 @@ function getGameSnapshot() {
 
 function newWebsocket(){
   const wsId = uuidv4();
-  return  new WebSocket(`ws://${config.apiUrl}/api/ws?id=${wsId}`);
+  const protocol = config.protocol === "https:" ? "wss:":"ws:";
+
+  return  new WebSocket(`${protocol}//${config.apiUrl}/api/ws?id=${wsId}`);
 }
 
 function baseRequest(method, url, uri, data = "") {
   return axios({
     method,
     timeout: 1000 * 5,
-    url: `http://${url}/api${uri}`,
+    url: `${config.protocol}//${url}/api${uri}`,
     data,
     headers: {
       "Content-Type": "application/json",
