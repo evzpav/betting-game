@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -33,11 +32,6 @@ func (h *handler) responseBadRequest(w http.ResponseWriter, err error) {
 }
 
 func (h *handler) serveWs(w http.ResponseWriter, r *http.Request) {
-	wsConnectionID := r.URL.Query().Get("id")
-	if len(wsConnectionID) != 0 {
-		fmt.Printf("ws connection id: %+v\n", wsConnectionID)
-	}
-
 	h.gameService.ServeWs(w, r)
 }
 

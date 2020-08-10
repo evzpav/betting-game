@@ -25,19 +25,10 @@ const store = new Vuex.Store({
   state: {
     connected: false,
     player: null,
-    gameStarted: false,
   },
   getters:{
-    gameStarted(state){
-      return state.gameStarted;
-    },
     player(state) {
-      if (state.player){
-        return state.player;
-      }
-      console.log(Vue.$session.get("betting_game_player"))
-      return Vue.$session.get("betting_game_player");
-      
+      return state.player || Vue.$session.get("betting_game_player");
     },
     connected(state){
       return state.connected;
@@ -46,7 +37,6 @@ const store = new Vuex.Store({
   mutations: {
     setConnected(state, value){
       state.connected = value;
-      Vue.$session.set("ws_conn_id", value);
     },
     setPlayer(state, player){
       state.player = player;
@@ -55,12 +45,6 @@ const store = new Vuex.Store({
     removePlayer(state){
       state.player = null;
       Vue.$session.remove("betting_game_player");
-      // Vue.$session.clear()
-      // Vue.$session.destroy()
-
-    },
-    setGameStarted(state){
-      state.gameStarted = true;
     },
   }
 })

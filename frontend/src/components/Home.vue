@@ -12,9 +12,9 @@
           class="input"
           :class="{'is-danger': nameError }"
           type="text"
-          placeholder="John Smith"
+          placeholder="john"
           maxlength="30"
-          @input="clearError()"
+          @input="onInputChange()"
         />
         <p class="help is-danger" v-if="nameError">{{nameError}}</p>
       </div>
@@ -31,8 +31,10 @@
         >{{i}}</button>
       </div>
       <p class="help is-danger" v-if="numberError">{{numberError}}</p>
-      <button class="button is-success" :class="{'is-loading': isLoading}" @click="joinGame">Join</button>
-      <button class="button is-secondary" @click="cancel()">Cancel</button>
+      <div class="buttons">
+        <button class="button is-success" :class="{'is-loading': isLoading}" @click="joinGame">Join</button>
+        <button class="button is-secondary" @click="cancel()">Cancel</button>
+      </div>
       <p class="help is-danger" v-if="error">Could not proceed. Please contact support.</p>
     </div>
   </div>
@@ -113,6 +115,10 @@ export default {
 
       return true;
     },
+    onInputChange() {
+      this.name = this.name.toLowerCase();
+      this.clearError();
+    },
     clearError() {
       this.nameError = "";
       this.numberError = "";
@@ -167,6 +173,8 @@ export default {
 .container {
   display: flex;
   margin-bottom: 20px;
+  height: 60vh;
+  padding: 15px;
 }
 
 .action-buttons {

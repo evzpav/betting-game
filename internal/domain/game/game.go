@@ -2,7 +2,6 @@ package game
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -120,8 +119,9 @@ func (s *service) StartGame() {
 	s.ResetGame()
 
 	s.game.ID = domain.GenerateNewID()
+	s.game.GameRunning = true
 
-	if err := s.Broadcast(domain.StartType, s.game.ID); err != nil {
+	if err := s.Broadcast(domain.StartType, s.game); err != nil {
 		s.log.Error().Err(err).Sendf("%v", err)
 		return
 	}
@@ -178,14 +178,6 @@ func (s *service) runRound() {
 
 }
 
-func (s *service) updateOverallRanking() domain.OverallRanking {
-	for _, p := range s.game.Players {
-		s.overallRanking[p.ID] = *p
-	}
-
-	return s.GetRankingSnapshot()
-}
-
 func (s *service) stopGame() {
 	s.cron.Stop()
 	s.game.GameRunning = false
@@ -203,6 +195,14 @@ func (s *service) stopGame() {
 	s.startCron()
 }
 
+func (s *service) updateOverallRanking() domain.OverallRanking {
+	for _, p := range s.game.Players {
+		s.overallRanking[p.ID] = *p
+	}
+
+	return s.GetRankingSnapshot()
+}
+
 func (s *service) ResetGame() {
 	s.game.Winner = nil
 	s.game.RoundCounter = 0
@@ -215,7 +215,7 @@ func (s *service) ResetGame() {
 		p.ResetPoints()
 	}
 
-	if err := s.Broadcast(domain.RestartType, true); err != nil {
+	if err := s.Broadcast(domain.RestartType, s.game); err != nil {
 		s.log.Error().Err(err).Sendf("%v", err)
 	}
 }
@@ -252,17 +252,11 @@ func (s *service) ReadPump(cli *domain.Client) {
 
 func (s *service) Join(player domain.Player) (domain.Player, error) {
 	player.ID = domain.GenerateNewID()
-
 	player.Name = strings.ToLower(player.Name)
+	player.Observer = true
 
-	if s.game.GameRunning {
-		player.Observer = true
-	}
-
-	for _, p := range s.game.Players {
-		if p.Name == player.Name {
-			return domain.Player{}, errors.New("name already in use")
-		}
+	if err := s.game.IsNameInUse(player.Name); err != nil {
+		return domain.Player{}, err
 	}
 
 	s.playersChan <- &player

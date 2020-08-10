@@ -1,14 +1,17 @@
 <template>
-  <div>
+  <div id="main-app">
     <nav class="navbar" role="navigation" aria-label="main navigation">
-      <div class="navbar-brand">
+      <!-- <div class="navbar-brand"> -->
+      <div class="navbar-start">
         <router-link to="/" tag="a" class="navbar-item">
           <h1 class="title">Betting Game</h1>
         </router-link>
       </div>
       <div class="navbar-end">
         <div class="navbar-item" v-if="player">
-          <p>{{player.name}}</p>
+          <p>
+            <strong>{{player.name}}</strong>
+          </p>
           <p v-if="player.observer">
             <small>(observing)</small>
           </p>
@@ -22,6 +25,12 @@
             <router-link to="/rules" class="button is-light">Rules</router-link>
           </div>
         </div>
+        <div class="navbar-item">
+          <div id="connection-status">
+            <p v-if="connected" class="help is-success">Connected</p>
+            <p v-else class="help is-danger">Not connected</p>
+          </div>
+        </div>
       </div>
     </nav>
     <div class="app">
@@ -30,11 +39,7 @@
       </div>
     </div>
     <footer id="footer">
-      <div id="connection-status" class="has-text-right">
-        <p v-if="connected" class="help is-success">Connected</p>
-        <p v-else class="help is-danger">Not connected</p>
-      </div>
-      <div id="author-link" class="content has-text-centered">
+      <div id="author-link">
         <p>
           <a href="https://github.com/evzpav">Evandro Pavei</a> - Florianópolis/Brazil - 2020
         </p>
@@ -53,30 +58,36 @@ export default {
 </script>
 
 <style>
+#main-app {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .app {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-content: center;
   align-items: center;
+  margin: auto;
 }
 
 #footer {
-  position: fixed;
-  bottom: 0;
   width: 100%;
-  height: 40px;
+  text-align: center;
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  justify-items: center;
+  margin-top: 30px;
 }
 
 #footer p {
   font-size: 12px;
 }
 
-#main-title {
-  padding: 10px;
-  margin-bottom: 10vh;
-}
-
-#connection-status {
+#connection-status p {
+  font-size: 11px;
 }
 </style>

@@ -3,22 +3,22 @@
     <div class="content">
       <div class="card game-table">
         <div
-          v-if="player && player.observer"
+          v-if="player && player.observer && gameStarted"
           class="notification is-info"
         >You will automatically join in the next game.</div>
 
         <div
-          v-if="!game || !game.gameRunning"
+          v-if="!gameStarted"
           class="notification is-info"
         >Waiting for players to join.</div>
 
-        <div v-if="game && game.gameRunning && !game.winner">
+        <div v-if="isGameRunning && !game.winner">
           <h4 class="title is-4">Game #{{game.gameCounter}}</h4>
         </div>
         <div v-if="isLoading">Loading game...</div>
 
         <div v-if="game" class="card-content">
-          <div v-if="game.gameRunning && !game.winner" class="notification is-black">
+          <div v-if="isGameRunning && !game.winner" class="notification is-black">
             <progress
               class="progress"
               :value="game.roundCounter"
@@ -134,11 +134,18 @@ export default {
     leaderboard: [],
     overallranking: [],
     game: null,
+    newGameStarting: false,
     // trophy: trophy,
     isLoading: false,
   }),
   computed: {
-    ...mapGetters(["player", "gameStarted"]),
+    ...mapGetters(["player"]),
+    gameStarted(){
+      return this.game && this.game.gameCounter > 0;
+    },
+    isGameRunning(){
+      return this.game && this.game.gameRunning
+    }
   },
   created() {
     this.loadRankingSnapshot();
@@ -146,15 +153,9 @@ export default {
 
     const ws = newWebsocket();
 
-    ws.onopen = (evt) => {
+    ws.onopen = () => {
       console.log("Connected to WS");
-      const url = evt.target.url;
-
-      if (url) {
-        const id = url.split("id=");
-        this.$store.commit("setConnected", id[1]);
-        console.log(id);
-      }
+      this.$store.commit("setConnected", true);
     };
 
     ws.onerror = () => {
@@ -172,35 +173,30 @@ export default {
       try {
         const parsedMsg = JSON.parse(msg);
         if (!parsedMsg.type || !parsedMsg.data) {
-          console.log(parsedMsg);
           throw "failed to parse message";
         }
 
         switch (parsedMsg.type) {
           case "start":
-            console.log("start");
-            this.$store.commit("setGameStarted");
-            break;
-          case "restart":
+            this.game = parsedMsg.data;
+            this.leaderboard = this.game.players;
             break;
           case "round":
-            if (parsedMsg.data) {
-              this.game = parsedMsg.data;
-              this.leaderboard = parsedMsg.data.players;
-
-              const meObserver = this.leaderboard.find((player) => {
-                return this.player.id === player.id && this.player.observer;
-              });
-
-              if (meObserver && !meObserver.observer) {
-                this.$store.commit("setPlayer", meObserver);
-              }
-            }
+            this.game = parsedMsg.data;
+            this.leaderboard = parsedMsg.data.players;
+            this.isNotObserver(this.leaderboard);
 
             break;
+          // case "restart":
+          //   console.log("restart");
+          //   this.game = parsedMsg.data;
+          //   console.log(this.game)
+          //   this.leaderboard = this.game.players;
+          //   break;
           case "end":
             this.game = parsedMsg.data;
             this.leaderboard = this.game.players;
+            console.log(this.game)
             break;
           case "overallranking":
             this.overallranking = parsedMsg.data;
@@ -212,6 +208,17 @@ export default {
     };
   },
   methods: {
+    isNotObserver(players) {
+      const meObserver = players.find((player) => {
+        return (
+          this.player && this.player.id === player.id && this.player.observer
+        );
+      });
+
+      if (meObserver && !meObserver.observer) {
+        this.$store.commit("setPlayer", meObserver);
+      }
+    },
     isPlayerTheWinner() {
       return this.player && this.game && this.player.id === this.game.winner.id;
     },

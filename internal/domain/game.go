@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"net/http"
 	"sort"
 )
@@ -35,6 +36,22 @@ func NewGame(minPlayersToStart, maxRoundsPerGame, intervalSeconds, magicNumberMa
 	return &Game{
 		Rules: rules,
 	}
+}
+
+func (g *Game) IsNameInUse(name string) error {
+	for _, p := range g.Observers {
+		if p.Name == name {
+			return errors.New("name already in use")
+		}
+	}
+
+	for _, p := range g.Players {
+		if p.Name == name {
+			return errors.New("name already in use")
+		}
+	}
+
+	return nil
 }
 
 func (g *Game) ResolveWinner() *Player {

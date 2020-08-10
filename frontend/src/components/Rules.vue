@@ -39,8 +39,18 @@
       <li>Highest lower number chosen</li>
       <li>Name ascending</li>
     </ul>
+
+    <router-link to="/" tag="button" class="button is-danger">
+      BACK
+    </router-link>
   </div>
 </template>
 
 <style scoped>
+
+.content {
+  font-size: 13px;
+  margin: auto;
+  padding: 20px;
+}
 </style>
