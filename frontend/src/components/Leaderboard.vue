@@ -13,7 +13,7 @@
         >Waiting for players to join.</div>
 
         <div v-if="game && game.gameRunning && !game.winner">
-          <h4 class="title is-4">Current Game #{{game.gameCounter}}</h4>
+          <h4 class="title is-4">Game #{{game.gameCounter}}</h4>
         </div>
         <div v-if="isLoading">Loading game...</div>
 

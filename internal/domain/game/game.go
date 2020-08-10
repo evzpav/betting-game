@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,8 +44,8 @@ func NewService(log log.Logger) *service {
 	}
 }
 
-func (s *service) SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSecond, magicNumberMatch int) {
-	s.game = domain.NewGame(minPlayersToStart, maxRoundsPerGame, intervalSecond, magicNumberMatch)
+func (s *service) SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSeconds, magicNumberMatch int) {
+	s.game = domain.NewGame(minPlayersToStart, maxRoundsPerGame, intervalSeconds, magicNumberMatch)
 	s.log.Info().Sendf("Game rules: %+v", s.game.Rules)
 }
 
@@ -59,7 +60,6 @@ func (s *service) RunHub() {
 		case client := <-s.hub.Register:
 			s.hub.Clients[client] = true
 		case client := <-s.hub.Unregister:
-			fmt.Printf("UNREGISTER: %+v\n", s.hub.Clients)
 			if _, ok := s.hub.Clients[client]; ok {
 				delete(s.hub.Clients, client)
 				close(client.Send)
@@ -259,6 +259,8 @@ func (s *service) RegisterNewClient(conn *websocket.Conn) {
 
 func (s *service) Join(player domain.Player) (domain.Player, error) {
 	player.ID = generateNewID()
+
+	player.Name = strings.ToLower(player.Name)
 
 	if s.game.GameRunning {
 		player.Observer = true

@@ -6,7 +6,7 @@
     <ul>
       <li>New random number generated every 1 second</li>
       <li>Maximum 30 rounds</li>
-      <li>Ends if any player has exactly 21 points</li>
+      <li>Ends if any player reaches exactly 21 points</li>
       <li>10s interval between games</li>
     </ul>
 

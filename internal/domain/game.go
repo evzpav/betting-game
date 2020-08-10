@@ -138,6 +138,7 @@ func sortPlayersByPoints(players []*Player) {
 
 		return a.Points > b.Points
 	})
+
 }
 
 type GameService interface {

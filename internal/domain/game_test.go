@@ -13,17 +13,17 @@ func TestResolveWinner(t *testing.T) {
 		g := domain.Game{
 			Players: []*domain.Player{
 				{
-					Name:    "Harry",
+					Name:    "harry",
 					Points:  13,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "Stace",
+					Name:    "stace",
 					Points:  14,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "Evandro",
+					Name:    "evandro",
 					Points:  12,
 					Numbers: []int{9, 10},
 				},
@@ -31,26 +31,26 @@ func TestResolveWinner(t *testing.T) {
 		}
 
 		winner := g.ResolveWinner()
-		assert.Equal(t, "Stace", winner.Name)
-		g.Players[1].Name = "Harry"
-		g.Players[2].Name = "Evandro"
+		assert.Equal(t, "stace", winner.Name)
+		g.Players[1].Name = "harry"
+		g.Players[2].Name = "evandro"
 	})
 
 	t.Run("diff name - same points, same upper and lower bounds", func(t *testing.T) {
 		g := domain.Game{
 			Players: []*domain.Player{
 				{
-					Name:    "Harry",
+					Name:    "harry",
 					Points:  10,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "Stace",
+					Name:    "stace",
 					Points:  10,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "Evandro",
+					Name:    "evandro",
 					Points:  10,
 					Numbers: []int{1, 5},
 				},
@@ -58,24 +58,24 @@ func TestResolveWinner(t *testing.T) {
 		}
 
 		winner := g.ResolveWinner()
-		assert.Equal(t, "Evandro", winner.Name)
+		assert.Equal(t, "evandro", winner.Name)
 	})
 
 	t.Run("diff lower - same points, same name, same upper bounds", func(t *testing.T) {
 		g := domain.Game{
 			Players: []*domain.Player{
 				{
-					Name:    "Harry",
+					Name:    "harry",
 					Points:  10,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "Harry",
+					Name:    "harry",
 					Points:  10,
 					Numbers: []int{3, 5},
 				},
 				{
-					Name:    "Harry",
+					Name:    "harry",
 					Points:  10,
 					Numbers: []int{2, 5},
 				},
@@ -90,17 +90,17 @@ func TestResolveWinner(t *testing.T) {
 		g := domain.Game{
 			Players: []*domain.Player{
 				{
-					Name:    "Stace",
+					Name:    "stace",
 					Points:  10,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "Stace",
+					Name:    "stace",
 					Points:  21,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "Stace",
+					Name:    "stace",
 					Points:  12,
 					Numbers: []int{1, 5},
 				},
@@ -115,17 +115,17 @@ func TestResolveWinner(t *testing.T) {
 		g := domain.Game{
 			Players: []*domain.Player{
 				{
-					Name:    "Evandro",
+					Name:    "evandro",
 					Points:  10,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "Evandro",
+					Name:    "evandro",
 					Points:  10,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "Evandro",
+					Name:    "evandro",
 					Points:  10,
 					Numbers: []int{1, 6},
 				},
@@ -145,17 +145,17 @@ func TestResolveWinnerByPoints(t *testing.T) {
 			Rules: domain.Rules{MagicNumberMatch: 21},
 			Players: []*domain.Player{
 				{
-					Name:    "Evandro",
+					Name:    "evandro",
 					Points:  40,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "John",
+					Name:    "john",
 					Points:  21,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "Rob",
+					Name:    "rob",
 					Points:  22,
 					Numbers: []int{1, 6},
 				},
@@ -163,7 +163,7 @@ func TestResolveWinnerByPoints(t *testing.T) {
 		}
 
 		winner := g.ResolveWinnerByPoints()
-		assert.Equal(t, "John", winner.Name)
+		assert.Equal(t, "john", winner.Name)
 	})
 
 	t.Run("Two match 21", func(t *testing.T) {
@@ -171,44 +171,44 @@ func TestResolveWinnerByPoints(t *testing.T) {
 			Rules: domain.Rules{MagicNumberMatch: 21},
 			Players: []*domain.Player{
 				{
-					Name:    "Evandro",
+					Name:    "evandro",
 					Points:  40,
 					Numbers: []int{1, 5},
 				},
+
 				{
-					Name:    "John",
+					Name:    "carlos",
 					Points:  21,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "Rob",
+					Name:    "vinicius",
 					Points:  21,
-					Numbers: []int{1, 6},
+					Numbers: []int{1, 5},
 				},
 			},
 		}
 
 		winner := g.ResolveWinnerByPoints()
-		assert.Equal(t, "Rob", winner.Name)
+		assert.Equal(t, "carlos", winner.Name)
 	})
-
 
 	t.Run("None match 21", func(t *testing.T) {
 		g := domain.Game{
 			Rules: domain.Rules{MagicNumberMatch: 21},
 			Players: []*domain.Player{
 				{
-					Name:    "Evandro",
+					Name:    "evandro",
 					Points:  40,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "John",
+					Name:    "john",
 					Points:  24,
 					Numbers: []int{1, 5},
 				},
 				{
-					Name:    "Rob",
+					Name:    "rob",
 					Points:  26,
 					Numbers: []int{1, 6},
 				},

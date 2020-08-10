@@ -125,6 +125,8 @@ export default {
       const numbers = [this.firstNumber, this.secondNumber];
       numbers.sort();
 
+      this.name = this.name.toLowerCase();
+
       const payload = {
         name: this.name,
         numbers: numbers,
