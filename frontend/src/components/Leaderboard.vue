@@ -2,18 +2,25 @@
   <div>
     <div class="content">
       <div class="card game-table">
-        <div v-if="player && player.observer">You will be able to join when new game starts.</div>
-        <div v-if="!game || !game.gameRunning">Waiting for players to join.</div>
+        <div
+          v-if="player && player.observer"
+          class="notification is-info"
+        >You will automatically join in the next game.</div>
 
-        <div v-if="game && game.gameRunning">
+        <div
+          v-if="!game || !game.gameRunning"
+          class="notification is-info"
+        >Waiting for players to join.</div>
+
+        <div v-if="game && game.gameRunning && !game.winner">
           <h4 class="title is-4">Current Game #{{game.gameCounter}}</h4>
         </div>
         <div v-if="isLoading">Loading game...</div>
 
         <div v-if="game" class="card-content">
-          <div v-if="game.gameRunning && !game.winner" class="notification">
+          <div v-if="game.gameRunning && !game.winner" class="notification is-black">
             <progress
-              class="progress is-info"
+              class="progress"
               :value="game.roundCounter"
               :max="game.rules.maxRoundsPerGame"
             ></progress>
@@ -24,23 +31,31 @@
             </div>
           </div>
 
-          <div v-if="game.winner">
-            <p>New players can join now. New game commencing soon.</p>
-            <progress class="progress is-small is-warning" max="100"></progress>
-            <br />
-          </div>
-
-          <div v-if="game.winner" class="notification is-link winner-notification">
+          <div v-if="game.winner" class="notification is-black winner-notification">
             <div>
-              <div>Game #{{game.gameCounter}} winner is:</div>
-              <div>
-                <strong>{{game.winner.name}}!</strong>
+              <div v-if="isPlayerTheWinner()">
+                <p>
+                  Congratulations
+                  <strong>{{game.winner.name}}</strong>!
+                </p>
+                <p>YOU won game #{{game.gameCounter}} with {{game.winner.points}} points!</p>
+              </div>
+              <div v-else>
+                <div>
+                  <strong>{{game.winner.name}}</strong>
+                  is the winner of game #{{game.gameCounter}} with {{game.winner.points}} points.
+                </div>
               </div>
             </div>
-            <img class="trophy" :src="trophy" alt="trophy" width="20" height="40" />
+            <!-- <img class="trophy" :src="trophy" alt="trophy" width="20" height="40" /> -->
           </div>
 
-          <table class="table" v-if="game.gameRunning">
+          <div v-if="game.winner" class="notification is-info">
+            <p>New players will be joining now. New game commencing in few seconds...</p>
+            <progress class="progress is-small is-info" max="100"></progress>
+          </div>
+
+          <table class="table" v-if="game.gameRunning && !game.winner">
             <thead>
               <tr>
                 <th>
@@ -110,7 +125,7 @@
 </template>
 
 <script>
-import trophy from "../assets/images/trophy1.svg";
+// import trophy from "../assets/images/trophy1.svg";
 import { newWebsocket, getRankingSnapshot, getGameSnapshot } from "../api";
 import { mapGetters } from "vuex";
 
@@ -119,7 +134,7 @@ export default {
     leaderboard: [],
     overallranking: [],
     game: null,
-    trophy: trophy,
+    // trophy: trophy,
     isLoading: false,
   }),
   computed: {
@@ -170,7 +185,6 @@ export default {
             break;
           case "round":
             if (parsedMsg.data) {
-              console.log(parsedMsg.data);
               this.game = parsedMsg.data;
               this.leaderboard = parsedMsg.data.players;
 
@@ -198,6 +212,9 @@ export default {
     };
   },
   methods: {
+    isPlayerTheWinner() {
+      return this.player && this.game && this.player.id === this.game.winner.id;
+    },
     async loadRankingSnapshot() {
       this.isLoading = true;
       try {
@@ -265,6 +282,11 @@ export default {
 
 .trophy {
   color: #fffe03;
+}
+
+.table tr.is-selected {
+  background-color: #fffe03;
+  color: black;
 }
 
 .number-tag {

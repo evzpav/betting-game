@@ -1,4 +1,3 @@
-include help.mk
 include .env
 
 .PHONY: run-local git-config version clean install lint env env-stop test cover build image tag push deploy run run-docker remove-docker image
@@ -65,6 +64,6 @@ run-docker: build ##@docker Run docker container.
 		--name $(NAME) \
 		--network=host \
 		-e HOST=localhost \
-		-e PORT=8080 \
+		-e PORT=8888 \
 		-e LOGGER_LEVEL=debug \
 		$(IMAGE)

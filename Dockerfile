@@ -32,6 +32,7 @@ RUN npm ci && npm cache clean --force
 FROM front-dependencies AS front
 WORKDIR /app/frontend
 COPY ./frontend ./
+ENV NODE_ENV=production
 RUN npm run build
 
 

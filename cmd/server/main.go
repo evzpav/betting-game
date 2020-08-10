@@ -31,15 +31,17 @@ func main() {
 
 	env.CheckRequired(log)
 
+	// game rules
 	const (
 		minPlayersToStart int = 2
 		maxRoundsPerGame  int = 30
 		intervalSeconds   int = 10
+		magicNumberMatch  int = 21
 	)
 
 	// services
 	gameService := game.NewService(log)
-	gameService.SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSeconds)
+	gameService.SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSeconds, magicNumberMatch)
 	gameService.Run()
 
 	// HTTP Server

@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-const magicNumber int = 21
-
 type Game struct {
 	ID           string    `json:"id"`
 	Players      []*Player `json:"players"`
@@ -25,6 +23,20 @@ type Rules struct {
 	MinPlayersToStart int `json:"minPlayersToStart"`
 	MaxRoundsPerGame  int `json:"maxRoundsPerGame"`
 	IntervalSeconds   int `json:"intervalSeconds"`
+	MagicNumberMatch  int `json:"magicNumberMatch"`
+}
+
+func NewGame(minPlayersToStart, maxRoundsPerGame, intervalSeconds, magicNumberMatch int) *Game {
+	rules := Rules{
+		MinPlayersToStart: minPlayersToStart,
+		MaxRoundsPerGame:  maxRoundsPerGame,
+		IntervalSeconds:   intervalSeconds,
+		MagicNumberMatch:  magicNumberMatch,
+	}
+
+	return &Game{
+		Rules: rules,
+	}
 }
 
 func (g *Game) ResolveWinner() *Player {
@@ -33,24 +45,7 @@ func (g *Game) ResolveWinner() *Player {
 }
 
 func (g *Game) SortPlayersByPoints() {
-	sort.SliceStable(g.Players, func(i, j int) bool {
-		a := g.Players[i]
-		b := g.Players[j]
-
-		if a.Points == b.Points {
-			if a.Numbers[1] == b.Numbers[1] {
-				if a.Numbers[0] == b.Numbers[0] {
-					return a.Name < b.Name
-				}
-
-				return a.Numbers[0] > b.Numbers[0]
-			}
-
-			return a.Numbers[1] > b.Numbers[1]
-		}
-
-		return a.Points > b.Points
-	})
+	sortPlayersByPoints(g.Players)
 }
 
 func (g *Game) SortPlayersByWinners() {
@@ -79,11 +74,20 @@ func (g *Game) ComputeScores(randomNumber int) {
 }
 
 func (g *Game) ResolveWinnerByPoints() *Player {
-	var winner *Player
+	var matchedMagic []*Player
 	for _, p := range g.Players {
-		if p.Points == magicNumber {
-			return winner
+		if p.Points == g.Rules.MagicNumberMatch {
+			matchedMagic = append(matchedMagic, p)
 		}
+	}
+
+	if len(matchedMagic) == 1 {
+		return matchedMagic[0]
+	}
+
+	if len(matchedMagic) > 1 {
+		sortPlayersByPoints(matchedMagic)
+		return matchedMagic[0]
 	}
 
 	return nil
@@ -117,4 +121,25 @@ type GameService interface {
 	Join(Player) (Player, error)
 	GetRankingSnapshot() OverallRanking
 	GetGameSnapshot() Game
+}
+
+func sortPlayersByPoints(players []*Player) {
+	sort.SliceStable(players, func(i, j int) bool {
+		a := players[i]
+		b := players[j]
+
+		if a.Points == b.Points {
+			if a.Numbers[1] == b.Numbers[1] {
+				if a.Numbers[0] == b.Numbers[0] {
+					return a.Name < b.Name
+				}
+
+				return a.Numbers[0] > b.Numbers[0]
+			}
+
+			return a.Numbers[1] > b.Numbers[1]
+		}
+
+		return a.Points > b.Points
+	})
 }

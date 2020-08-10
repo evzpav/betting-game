@@ -34,18 +34,6 @@ func newHub() *domain.Hub {
 	}
 }
 
-func newGame(minPlayersToStart, maxRoundsPerGame, intervalSeconds int) *domain.Game {
-	rules := domain.Rules{
-		MinPlayersToStart: minPlayersToStart,
-		MaxRoundsPerGame:  maxRoundsPerGame,
-		IntervalSeconds:   intervalSeconds,
-	}
-
-	return &domain.Game{
-		Rules: rules,
-	}
-}
-
 func NewService(log log.Logger) *service {
 	return &service{
 		overallRanking: make(map[string]domain.Player),
@@ -55,10 +43,9 @@ func NewService(log log.Logger) *service {
 	}
 }
 
-func (s *service) SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSeconds int) {
-	s.game = newGame(minPlayersToStart, maxRoundsPerGame, intervalSeconds)
+func (s *service) SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSecond, magicNumberMatch int) {
+	s.game = domain.NewGame(minPlayersToStart, maxRoundsPerGame, intervalSecond, magicNumberMatch)
 	s.log.Info().Sendf("Game rules: %+v", s.game.Rules)
-
 }
 
 func (s *service) Run() {
@@ -261,10 +248,6 @@ func (s *service) WritePump(cli *domain.Client) {
 func (s *service) ReadPump(cli *domain.Client) {
 	go cli.ReadPump(s.hub)
 }
-
-// func (s *service) CloseSend(cli *domain.Client) {
-// 	close(cli.Send)
-// }
 
 func (s *service) RegisterNewClient(conn *websocket.Conn) {
 	cli := domain.NewClient(s.hub, conn)

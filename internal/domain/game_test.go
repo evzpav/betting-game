@@ -137,3 +137,86 @@ func TestResolveWinner(t *testing.T) {
 	})
 
 }
+
+func TestResolveWinnerByPoints(t *testing.T) {
+
+	t.Run("One match 21", func(t *testing.T) {
+		g := domain.Game{
+			Rules: domain.Rules{MagicNumberMatch: 21},
+			Players: []*domain.Player{
+				{
+					Name:    "Evandro",
+					Points:  40,
+					Numbers: []int{1, 5},
+				},
+				{
+					Name:    "John",
+					Points:  21,
+					Numbers: []int{1, 5},
+				},
+				{
+					Name:    "Rob",
+					Points:  22,
+					Numbers: []int{1, 6},
+				},
+			},
+		}
+
+		winner := g.ResolveWinnerByPoints()
+		assert.Equal(t, "John", winner.Name)
+	})
+
+	t.Run("Two match 21", func(t *testing.T) {
+		g := domain.Game{
+			Rules: domain.Rules{MagicNumberMatch: 21},
+			Players: []*domain.Player{
+				{
+					Name:    "Evandro",
+					Points:  40,
+					Numbers: []int{1, 5},
+				},
+				{
+					Name:    "John",
+					Points:  21,
+					Numbers: []int{1, 5},
+				},
+				{
+					Name:    "Rob",
+					Points:  21,
+					Numbers: []int{1, 6},
+				},
+			},
+		}
+
+		winner := g.ResolveWinnerByPoints()
+		assert.Equal(t, "Rob", winner.Name)
+	})
+
+
+	t.Run("None match 21", func(t *testing.T) {
+		g := domain.Game{
+			Rules: domain.Rules{MagicNumberMatch: 21},
+			Players: []*domain.Player{
+				{
+					Name:    "Evandro",
+					Points:  40,
+					Numbers: []int{1, 5},
+				},
+				{
+					Name:    "John",
+					Points:  24,
+					Numbers: []int{1, 5},
+				},
+				{
+					Name:    "Rob",
+					Points:  26,
+					Numbers: []int{1, 6},
+				},
+			},
+		}
+
+		winner := g.ResolveWinnerByPoints()
+		assert.Nil(t, winner)
+	})
+
+}

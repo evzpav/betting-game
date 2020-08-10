@@ -1,3 +1,3 @@
 export default {
-    apiUrl: process.env.NODE_ENV === "production" ? window.location.origin : "localhost:8787",
+    apiUrl: process.env.NODE_ENV === "production" ? window.location.host : "localhost:8787",
 };
