@@ -45,9 +45,9 @@
           <p>
             New players will be joining now. New game commencing in
             <span
-              v-if="secondsToNextGame !== undefined"
+              v-if="secondsToNextGame >= 0"
             >{{secondsToNextGame}}</span>
-            <span v-else>few</span> seconds...
+            <span v-if="!secondsToNextGame">few</span> seconds...
           </p>
         </div>
 
