@@ -19,11 +19,11 @@ func NewGameStorage(log log.Logger) *gameStorage {
 	}
 }
 
-func (gs *gameStorage) Get() *domain.Game {
+func (gs *gameStorage) GetGame() *domain.Game {
 	return gs.game
 }
 
-func (gs *gameStorage) Set(game *domain.Game) {
+func (gs *gameStorage) SetGame(game *domain.Game) {
 	gs.game = game
 }
 
@@ -31,6 +31,6 @@ func (gs *gameStorage) GetOverallRanking() domain.OverallRanking {
 	return gs.overallRanking
 }
 
-func (gs *gameStorage) SetOverallRanking(or domain.OverallRanking)  {
+func (gs *gameStorage) SetOverallRanking(or domain.OverallRanking) {
 	gs.overallRanking = or
 }

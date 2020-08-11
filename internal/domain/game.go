@@ -100,6 +100,7 @@ func (g *Game) ResolveWinnerByPoints() *Player {
 }
 
 func (g *Game) Reset() {
+	g.ID = GenerateNewID()
 	g.Winner = nil
 	g.RoundCounter = 0
 
@@ -172,8 +173,8 @@ type GameService interface {
 	GetGameSnapshot() Game
 }
 type GameStorage interface {
-	Get() *Game
-	Set(*Game)
+	GetGame() *Game
+	SetGame(*Game)
 	GetOverallRanking() OverallRanking
 	SetOverallRanking(or OverallRanking)
 }

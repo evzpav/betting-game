@@ -43,7 +43,7 @@ func NewService(gameStorage domain.GameStorage, log log.Logger) *service {
 
 func (s *service) SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSeconds, magicNumberMatch int) {
 	game := domain.NewGame(minPlayersToStart, maxRoundsPerGame, intervalSeconds, magicNumberMatch)
-	s.gameStorage.Set(game)
+	s.gameStorage.SetGame(game)
 	s.log.Info().Sendf("Game rules: %+v", game.Rules)
 }
 
@@ -77,7 +77,7 @@ func (s *service) RunHub() {
 
 func (s *service) WaitForPlayers() {
 	for p := range s.playersChan {
-		game := s.gameStorage.Get()
+		game := s.gameStorage.GetGame()
 		game.Observers = append(game.Observers, p)
 
 		var once sync.Once
@@ -119,9 +119,6 @@ func (s *service) StartGame(game *domain.Game) {
 
 	s.ResetGame(game)
 
-	game.ID = domain.GenerateNewID()
-	game.GameRunning = true
-
 	if err := s.Broadcast(domain.StartType, game); err != nil {
 		s.log.Error().Err(err).Sendf("%v", err)
 		return
@@ -129,7 +126,7 @@ func (s *service) StartGame(game *domain.Game) {
 
 	s.startCron(game)
 
-	s.gameStorage.Set(game)
+	s.gameStorage.SetGame(game)
 }
 
 func (s *service) startCron(game *domain.Game) {
@@ -152,7 +149,6 @@ func (s *service) runRound(game *domain.Game) {
 
 	game.RoundCounter++
 	randomNumber := game.GenerateRandomNumber()
-
 	game.RandomNumber = randomNumber
 	s.log.Debug().Sendf("Round:%v; Number:%v", game.RoundCounter, randomNumber)
 
@@ -263,7 +259,7 @@ func (s *service) Join(player domain.Player) (domain.Player, error) {
 	player.Name = strings.ToLower(player.Name)
 	player.Observer = true
 
-	game := s.gameStorage.Get()
+	game := s.gameStorage.GetGame()
 	if err := game.IsNameInUse(player.Name); err != nil {
 		return domain.Player{}, err
 	}
@@ -278,5 +274,5 @@ func (s *service) GetRankingSnapshot() domain.OverallRanking {
 }
 
 func (s *service) GetGameSnapshot() domain.Game {
-	return *s.gameStorage.Get()
+	return *s.gameStorage.GetGame()
 }
