@@ -99,6 +99,14 @@ func (g *Game) ResolveWinnerByPoints() *Player {
 	return nil
 }
 
+func (g *Game) Reset() {
+	g.Winner = nil
+	g.RoundCounter = 0
+
+	g.Players = append(g.Players, g.Observers...)
+	g.Observers = make([]*Player, 0)
+}
+
 func (g *Game) GenerateRandomNumber() int {
 	min := 1
 	max := 10
@@ -162,4 +170,10 @@ type GameService interface {
 	Join(Player) (Player, error)
 	GetRankingSnapshot() OverallRanking
 	GetGameSnapshot() Game
+}
+type GameStorage interface {
+	Get() *Game
+	Set(*Game)
+	GetOverallRanking() OverallRanking
+	SetOverallRanking(or OverallRanking)
 }

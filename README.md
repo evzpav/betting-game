@@ -79,5 +79,6 @@ When new players join when a game is running they will only observe it until nex
 - Players cannot have the same name
 - Player names are saved in lowercase
 - Players cannot leave the game
+- Numbers chosen cannot be changed
 - 
 

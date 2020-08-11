@@ -16,12 +16,11 @@ import (
 )
 
 type service struct {
-	overallRanking map[string]domain.Player
-	game           *domain.Game
-	hub            *domain.Hub
-	log            log.Logger
-	playersChan    chan *domain.Player
-	cron           *cron.Cron
+	gameStorage domain.GameStorage
+	hub         *domain.Hub
+	log         log.Logger
+	playersChan chan *domain.Player
+	cron        *cron.Cron
 }
 
 func newHub() *domain.Hub {
@@ -33,18 +32,19 @@ func newHub() *domain.Hub {
 	}
 }
 
-func NewService(log log.Logger) *service {
+func NewService(gameStorage domain.GameStorage, log log.Logger) *service {
 	return &service{
-		overallRanking: make(map[string]domain.Player),
-		playersChan:    make(chan *domain.Player),
-		hub:            newHub(),
-		log:            log,
+		gameStorage: gameStorage,
+		playersChan: make(chan *domain.Player),
+		hub:         newHub(),
+		log:         log,
 	}
 }
 
 func (s *service) SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSeconds, magicNumberMatch int) {
-	s.game = domain.NewGame(minPlayersToStart, maxRoundsPerGame, intervalSeconds, magicNumberMatch)
-	s.log.Info().Sendf("Game rules: %+v", s.game.Rules)
+	game := domain.NewGame(minPlayersToStart, maxRoundsPerGame, intervalSeconds, magicNumberMatch)
+	s.gameStorage.Set(game)
+	s.log.Info().Sendf("Game rules: %+v", game.Rules)
 }
 
 func (s *service) Run() {
@@ -77,12 +77,13 @@ func (s *service) RunHub() {
 
 func (s *service) WaitForPlayers() {
 	for p := range s.playersChan {
-		s.game.Observers = append(s.game.Observers, p)
+		game := s.gameStorage.Get()
+		game.Observers = append(game.Observers, p)
 
 		var once sync.Once
 		canStart := func() {
-			if len(s.game.Observers) >= s.game.Rules.MinPlayersToStart {
-				s.StartGame()
+			if len(game.Observers) >= game.Rules.MinPlayersToStart {
+				s.StartGame(game)
 			}
 		}
 
@@ -113,29 +114,33 @@ func (s *service) Broadcast(messageType domain.MessageType, data interface{}) er
 	return nil
 }
 
-func (s *service) StartGame() {
+func (s *service) StartGame(game *domain.Game) {
 	s.log.Debug().Send("Start game")
 
-	s.ResetGame()
+	s.ResetGame(game)
 
-	s.game.ID = domain.GenerateNewID()
-	s.game.GameRunning = true
+	game.ID = domain.GenerateNewID()
+	game.GameRunning = true
 
-	if err := s.Broadcast(domain.StartType, s.game); err != nil {
+	if err := s.Broadcast(domain.StartType, game); err != nil {
 		s.log.Error().Err(err).Sendf("%v", err)
 		return
 	}
 
-	s.startCron()
+	s.startCron(game)
+
+	s.gameStorage.Set(game)
 }
 
-func (s *service) startCron() {
-	s.game.GameCounter++
-	s.game.GameRunning = true
+func (s *service) startCron(game *domain.Game) {
+	game.GameCounter++
+	game.GameRunning = true
 
 	s.cron = cron.New(cron.WithSeconds())
 	everySecond := "*/1 * * * * *"
-	_, err := s.cron.AddFunc(everySecond, s.runRound)
+	_, err := s.cron.AddFunc(everySecond, func() {
+		s.runRound(game)
+	})
 	if err != nil {
 		s.log.Error().Err(err).Sendf("failed to add cron func %v", err)
 	}
@@ -143,74 +148,81 @@ func (s *service) startCron() {
 	s.cron.Start()
 }
 
-func (s *service) runRound() {
+func (s *service) runRound(game *domain.Game) {
 
-	s.game.RoundCounter++
-	randomNumber := s.game.GenerateRandomNumber()
+	game.RoundCounter++
+	randomNumber := game.GenerateRandomNumber()
 
-	s.game.RandomNumber = randomNumber
-	s.log.Debug().Sendf("Round:%v; Number:%v", s.game.RoundCounter, randomNumber)
+	game.RandomNumber = randomNumber
+	s.log.Debug().Sendf("Round:%v; Number:%v", game.RoundCounter, randomNumber)
 
-	s.game.ComputeScores(randomNumber)
-	s.game.SortPlayersByPoints()
+	game.ComputeScores(randomNumber)
+	game.SortPlayersByPoints()
 
-	if err := s.Broadcast(domain.RoundType, s.game); err != nil {
+	if err := s.Broadcast(domain.RoundType, game); err != nil {
 		s.log.Error().Err(err).Sendf("%v", err)
 		return
 	}
 
 	var winner *domain.Player
-	if winner = s.game.ResolveWinnerByPoints(); winner == nil {
-		if s.game.RoundCounter >= s.game.Rules.MaxRoundsPerGame {
-			winner = s.game.ResolveWinner()
+	if winner = game.ResolveWinnerByPoints(); winner == nil {
+		if game.RoundCounter >= game.Rules.MaxRoundsPerGame {
+			winner = game.ResolveWinner()
 		}
 	}
 
 	if winner != nil {
 		winner.Winners++
-		s.game.Winner = winner
-		if err := s.Broadcast(domain.EndType, s.game); err != nil {
+		game.Winner = winner
+		if err := s.Broadcast(domain.EndType, game); err != nil {
 			s.log.Error().Err(err).Sendf("%v", err)
 		}
 
-		s.stopGame()
+		s.stopGame(game)
 	}
 
 }
 
-func (s *service) stopGame() {
+func (s *service) stopGame(game *domain.Game) {
 	s.cron.Stop()
-	s.game.GameRunning = false
-	s.game.IncrementGamesPlayed()
+	game.GameRunning = false
+	game.IncrementGamesPlayed()
 
-	ranking := s.updateOverallRanking()
+	ranking := s.updateOverallRanking(game)
 
 	if err := s.Broadcast(domain.OverallRankingType, ranking); err != nil {
 		s.log.Error().Err(err).Sendf("%v", err)
 	}
 
-	time.Sleep(time.Duration(s.game.Rules.IntervalSeconds) * time.Second)
+	time.Sleep(time.Duration(game.Rules.IntervalSeconds) * time.Second)
 
-	s.ResetGame()
-	s.startCron()
+	s.ResetGame(game)
+	s.startCron(game)
 }
 
-func (s *service) updateOverallRanking() domain.OverallRanking {
-	for _, p := range s.game.Players {
-		s.overallRanking[p.ID] = *p
+func (s *service) updateOverallRanking(game *domain.Game) domain.OverallRanking {
+	ranking := make(map[string]domain.Player)
+
+	for _, p := range game.Players {
+		ranking[p.ID] = *p
 	}
 
-	return s.GetRankingSnapshot()
+	var overallRanking domain.OverallRanking
+	for _, p := range ranking {
+		overallRanking = append(overallRanking, p)
+	}
+
+	overallRanking.SortPlayersByWinners()
+
+	s.gameStorage.SetOverallRanking(overallRanking)
+
+	return overallRanking
 }
 
-func (s *service) ResetGame() {
-	s.game.Winner = nil
-	s.game.RoundCounter = 0
+func (s *service) ResetGame(game *domain.Game) {
+	game.Reset()
 
-	s.game.Players = append(s.game.Players, s.game.Observers...)
-	s.game.Observers = make([]*domain.Player, 0)
-
-	for _, p := range s.game.Players {
+	for _, p := range game.Players {
 		p.Observer = false
 		p.ResetPoints()
 	}
@@ -251,7 +263,8 @@ func (s *service) Join(player domain.Player) (domain.Player, error) {
 	player.Name = strings.ToLower(player.Name)
 	player.Observer = true
 
-	if err := s.game.IsNameInUse(player.Name); err != nil {
+	game := s.gameStorage.Get()
+	if err := game.IsNameInUse(player.Name); err != nil {
 		return domain.Player{}, err
 	}
 
@@ -261,15 +274,9 @@ func (s *service) Join(player domain.Player) (domain.Player, error) {
 }
 
 func (s *service) GetRankingSnapshot() domain.OverallRanking {
-	var ranking domain.OverallRanking
-	for _, p := range s.overallRanking {
-		ranking = append(ranking, p)
-	}
-
-	ranking.SortPlayersByWinners()
-	return ranking
+	return s.gameStorage.GetOverallRanking()
 }
 
 func (s *service) GetGameSnapshot() domain.Game {
-	return *s.game
+	return *s.gameStorage.Get()
 }
