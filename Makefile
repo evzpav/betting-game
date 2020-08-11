@@ -34,7 +34,10 @@ build-local: ##@dev Build binary locally
 	"-X main.version=${VERSION} -X main.build=${BUILD} -X main.date=${DATE}" \
 	./cmd/server/main.go
 
-run-frontend: ##@dev Run Vue frontend locally at port 8080
+install: ##@dev Instal Vue frontend dependencies
+	cd ./frontend && npm install
+
+run-frontend: install ##@dev Run Vue frontend locally at port 8080
 	cd ./frontend && npm run serve
 
 build-frontend: ##@dev Build static files for Vue

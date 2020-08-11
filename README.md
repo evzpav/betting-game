@@ -5,7 +5,7 @@
 	One number is drawn every 1s. Score is calculated and ranking between players is shown. Game lasts max 30 rounds.
 	It is a multiplayer game, and minimum 2 players are needes to start the game.
 	More info below.
-	
+
  <div>
     <h2>Starting the game</h2>
     <ul>
@@ -92,7 +92,7 @@
 # Run server locally on port 8787
 make run-local
 
-# Run vue frontend locally 
+# Install Vue frontend dependencies and run it locally
 make run-frontend
 # Open in the browser: http://localhost:8080
 
