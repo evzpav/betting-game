@@ -34,7 +34,6 @@ type MessageType string
 const (
 	RoundType          MessageType = "round"
 	StartType          MessageType = "start"
-	RestartType        MessageType = "restart"
 	EndType            MessageType = "end"
 	OverallRankingType MessageType = "overallranking"
 )

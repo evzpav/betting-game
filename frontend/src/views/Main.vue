@@ -18,11 +18,11 @@
         </div>
         <div class="navbar-item">
           <div class="buttons">
-            <router-link v-if="!player" to="/" tag="a" class="button is-warning">
+            <router-link id="start-btn" v-if="showStartButton && !player" to="/" tag="a" class="button">
               <strong>Start</strong>
             </router-link>
 
-            <router-link to="/rules" class="button is-light">Rules</router-link>
+            <router-link id="rules-btn" to="/rules" class="button is-light">Rules</router-link>
           </div>
         </div>
         <div class="navbar-item">
@@ -52,7 +52,7 @@
 import { mapGetters } from "vuex";
 export default {
   computed: {
-    ...mapGetters(["player", "connected"]),
+    ...mapGetters(["player", "connected","showStartButton"]),
   },
 };
 </script>
@@ -89,5 +89,10 @@ export default {
 
 #connection-status p {
   font-size: 10px;
+}
+
+#start-btn {
+  background-color: #fffe03;
+  border: none;
 }
 </style>

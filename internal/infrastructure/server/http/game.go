@@ -32,10 +32,20 @@ func (h *handler) responseBadRequest(w http.ResponseWriter, err error) {
 }
 
 func (h *handler) serveWs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	h.gameService.ServeWs(w, r)
 }
 
 func (h *handler) postJoin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	bs, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		h.log.Error().Err(err).Sendf("%v", err)
@@ -77,6 +87,11 @@ func (h *handler) postJoin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) getRankingSnapshot(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	ranking := h.gameService.GetRankingSnapshot()
 	bs, err := json.Marshal(ranking)
 	if err != nil {
@@ -92,6 +107,11 @@ func (h *handler) getRankingSnapshot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) getGameSnapshot(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	game := h.gameService.GetGameSnapshot()
 
 	bs, err := json.Marshal(game)

@@ -61,10 +61,10 @@ test-docker: ##@docker Run unit tests in docker
 lint-docker: ##@docker Run linting in docker
 	make target TARGET=lint
 
-build: ##@docker Build docker image.
+image: ##@docker Build docker image.
 	make target TARGET=image
 
-run-docker: build ##@docker Run docker container.
+run-docker: image ##@docker Run docker container.
 	docker run --rm \
 		--name $(NAME) \
 		--network=host \

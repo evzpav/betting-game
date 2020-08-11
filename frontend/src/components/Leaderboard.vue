@@ -39,12 +39,16 @@
               </div>
             </div>
           </div>
-          <img class="trophy" :src="trophy" alt="trophy" width="20" height="40" />
         </div>
 
         <div v-if="game.winner" class="notification is-info">
-          <p>New players will be joining now. New game commencing in few seconds...</p>
-          <progress class="progress is-small is-link" max="100"></progress>
+          <p>
+            New players will be joining now. New game commencing in
+            <span
+              v-if="secondsToNextGame !== undefined"
+            >{{secondsToNextGame}}</span>
+            <span v-else>few</span> seconds...
+          </p>
         </div>
 
         <table class="table" v-if="game.gameRunning">
@@ -83,7 +87,7 @@
         <h4 class="title is-4">Overall Ranking</h4>
       </div>
       <div v-if="isLoading">Loading ranking...</div>
-      <div class="card-content" v-if="overallranking.length > 0">
+      <div class="card-content" v-if="overallranking && overallranking.length > 0">
         <table class="table">
           <thead>
             <tr>
@@ -116,7 +120,6 @@
 </template>
 
 <script>
-import trophy from "../assets/images/trophy1.svg";
 import { newWebsocket, getRankingSnapshot, getGameSnapshot } from "../api";
 import { mapGetters } from "vuex";
 
@@ -126,9 +129,9 @@ export default {
     overallranking: [],
     game: null,
     newGameStarting: false,
-    trophy: trophy,
     isLoading: false,
     ws: null,
+    secondsToNextGame: null,
   }),
   computed: {
     ...mapGetters(["player"]),
@@ -178,13 +181,8 @@ export default {
             this.leaderboard = parsedMsg.data.players;
             this.setNotObserver(this.leaderboard);
             break;
-          // case "restart":
-          //   console.log("restart");
-          //   this.game = parsedMsg.data;
-          //   console.log(this.game)
-          //   this.leaderboard = this.game.players;
-          //   break;
           case "end":
+            this.countdown();
             this.game = parsedMsg.data;
             this.leaderboard = this.game.players;
             break;
@@ -246,9 +244,28 @@ export default {
       this.overallranking = [];
     },
     closeWebsocket() {
-      console.log("closed websocket")
-      this.ws.onclose = ()=> {}; // disable onclose handler first
+      console.log("closed websocket");
+      this.ws.onclose = () => {}; // disable onclose handler first
       this.ws.close();
+    },
+    countdown() {
+      const secondsToNextGame = 10;
+      this.secondsToNextGame = secondsToNextGame;
+      const countDownDate = new Date().getTime() + secondsToNextGame * 1000;
+      const vm = this;
+      const x = setInterval(function () {
+        const now = new Date().getTime();
+        const distance = countDownDate - now;
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        if (distance < 0) {
+          clearInterval(x);
+          return
+        }
+
+        vm.secondsToNextGame = seconds < 0 ? 0 : seconds;
+        
+      }, 1000);
     },
   },
   mounted() {
@@ -288,10 +305,6 @@ export default {
 .winner-notification {
   display: flex;
   justify-content: space-between;
-}
-
-.trophy {
-  color: #fffe03;
 }
 
 .table tr.is-selected {

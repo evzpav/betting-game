@@ -214,10 +214,6 @@ func (s *service) ResetGame() {
 		p.Observer = false
 		p.ResetPoints()
 	}
-
-	if err := s.Broadcast(domain.RestartType, s.game); err != nil {
-		s.log.Error().Err(err).Sendf("%v", err)
-	}
 }
 
 func (s *service) ServeWs(w http.ResponseWriter, r *http.Request) {

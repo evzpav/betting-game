@@ -34,7 +34,7 @@ func main() {
 	// game rules
 	const (
 		minPlayersToStart int = 2
-		maxRoundsPerGame  int = 10
+		maxRoundsPerGame  int = 30
 		intervalSeconds   int = 10
 		magicNumberMatch  int = 21
 	)

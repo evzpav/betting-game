@@ -25,6 +25,7 @@ const store = new Vuex.Store({
   state: {
     connected: false,
     player: null,
+    showStartButton: true
   },
   getters:{
     player(state) {
@@ -32,6 +33,9 @@ const store = new Vuex.Store({
     },
     connected(state){
       return state.connected;
+    },
+    showStartButton(state){
+      return state.showStartButton;
     }
   },
   mutations: {
@@ -46,6 +50,9 @@ const store = new Vuex.Store({
       state.player = null;
       Vue.$session.remove("betting_game_player");
     },
+    setShowStartButton(state, value){
+      state.showStartButton = value;
+    },
   }
 })
 
@@ -56,6 +63,15 @@ const router = new VueRouter({
   mode: "history",
   base: "/",
 });
+
+router.beforeEach((to, from, next) => {
+  if(to.fullPath === "/"){
+    store.state.showStartButton = false;
+  } else {
+    store.state.showStartButton = true;
+  }
+  next()
+})
 
 Vue.config.productionTip = false;
 

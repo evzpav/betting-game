@@ -1,13 +1,14 @@
 <template>
   <div class="container">
     <div v-if="!isPlayer" class="action-buttons">
-      <div class="action-button play" @click="play()">Play</div>
-      <div class="action-button observe" @click="observe()">Observe</div>
+      <div id="play-btn" class="action-button play" @click="play()">Play</div>
+      <div id="observe-btn" class="action-button observe" @click="observe()">Observe</div>
     </div>
     <div v-if="isPlayer" class="field">
       <label class="label">Name</label>
       <div class="control mb">
         <input
+          id="name-input"
           v-model="name"
           class="input"
           :class="{'is-danger': nameError }"
@@ -22,6 +23,7 @@
       <label class="label">Choose your lucky numbers. Select 2:</label>
       <div class="numbers mb">
         <button
+          :id="genButtonId(i)"
           type="button"
           class="button is-black number-item"
           v-for="i in 10"
@@ -32,8 +34,8 @@
       </div>
       <p class="help is-danger" v-if="numberError">{{numberError}}</p>
       <div class="buttons">
-        <button class="button is-success" :class="{'is-loading': isLoading}" @click="joinGame">Join</button>
-        <button class="button is-secondary" @click="cancel()">Cancel</button>
+        <button id="join-btn" class="button is-success" :class="{'is-loading': isLoading}" @click="joinGame">JOIN</button>
+        <button id="cancel-btn" class="button is-secondary" @click="cancel()">CANCEL</button>
       </div>
       <p class="help is-danger" v-if="error">Could not proceed. Please contact support.</p>
     </div>
@@ -64,6 +66,9 @@ export default {
     }
   },
   methods: {
+    genButtonId(i){
+      return `number-btn-${i}`
+    },
     play() {
       this.isPlayer = true;
     },
