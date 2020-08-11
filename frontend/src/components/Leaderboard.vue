@@ -45,9 +45,9 @@
           <p>
             New players will be joining now. New game commencing in
             <span
-              v-if="secondsToNextGame >= 0"
+              v-if="secondsToNextGame && secondsToNextGame >= 0"
             >{{secondsToNextGame}}</span>
-            <span v-if="!secondsToNextGame">few</span> seconds...
+            <span v-if="secondsToNextGame === null">few</span> seconds...
           </p>
         </div>
 
@@ -258,13 +258,12 @@ export default {
         const distance = countDownDate - now;
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
+        vm.secondsToNextGame = seconds && seconds >= 0 ? seconds : -1;
+
         if (distance < 0) {
           clearInterval(x);
-          return
+          return;
         }
-
-        vm.secondsToNextGame = seconds < 0 ? 0 : seconds;
-        
       }, 1000);
     },
   },

@@ -1,6 +1,6 @@
 # Betting Game
 
-	It is web app made with Golang backend (no database) with websockets and rest API. Frontend is done in VueJs.
+	It is web app made with Golang server (no database) with websockets and rest API. Frontend is done in VueJs. Golang API serves the static files from frontend.
 	It is a betting game, where player inputs his name and chooses 2 numbers.
 	One number is drawn every 1s. Score is calculated and ranking between players is shown. Game lasts max 30 rounds.
 	It is a multiplayer game, and minimum 2 players are needes to start the game.
@@ -68,41 +68,36 @@
 - New browser tab, means new player (player saved on session storage)
 
 
-## Getting Started
+## Run project
 
-### Prerequisites
+Below are 2 options to run the project locally:
 
+### Option 1 (recommended):
+#### Prerequisites
 - [GNU Make](https://www.gnu.org/software/make/)
 - [Docker](http://docker.com)
-- [Golang](http://golang.org/)(>11.0)
-- [NodeJs](http://nodejs.org)
 
-### Environment variables
-
-```bash
-	HOST
-	PORT
-	LOGGER_LEVEL
-```
-
-### Running locally
-
-```bash
-
-# Run server locally on port 8787
-make run-local
-
-# Install Vue frontend dependencies and run it locally
-make run-frontend
-# Open in the browser: http://localhost:8080
-
-```
 
 ### Running locally on Docker
 It will build frontend and backend, generate a single docker image and run it on port 8888:
 ```bash
 make run-docker
 # Open in the browser: http://localhost:8888
+```
+### Option 2:
+#### Prerequisites
+- [GNU Make](https://www.gnu.org/software/make/)
+- [Golang](http://golang.org/)(>11.0)
+- [NodeJs](http://nodejs.org)
+
+### Running locally
+```bash
+# Run server locally on port 8787
+make run-local
+
+# Install Vue frontend dependencies and run it locally
+make run-frontend
+# Open in the browser: http://localhost:8080
 ```
 
 ### Unit Tests
@@ -122,6 +117,13 @@ make test-docker
 make lint-docker
 ```
 
+### Environment variables
+
+```bash
+HOST
+PORT
+LOGGER_LEVEL
+```
 
 ### Deployment
 The command below will build frontend Vue app for production(generate static files) and will build Go backend and generate the server binary.

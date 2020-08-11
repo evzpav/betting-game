@@ -41,7 +41,7 @@
     <footer id="footer">
       <div id="author-link">
         <p>
-          <a href="https://github.com/evzpav">Evandro Pavei</a> - Florianópolis/Brazil - 2020
+          <a href="https://github.com/evzpav" target="_blank">Evandro Pavei</a> - Florianópolis/Brazil - 2020
         </p>
       </div>
     </footer>

@@ -46,6 +46,7 @@ build-frontend: ##@dev Build static files for Vue
 run-local: build-local ##@dev Run locally.
 	HOST=localhost \
 	PORT=8787 \
+	LOGGER_LEVEL=debug \
 	./betting-game
 
 target: 
@@ -73,6 +74,6 @@ run-docker: image ##@docker Run docker container.
 		--network=host \
 		-e HOST=localhost \
 		-e PORT=8888 \
-		-e LOGGER_LEVEL=debug \
+		-e LOGGER_LEVEL=info \
 		$(IMAGE)
 
