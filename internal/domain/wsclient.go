@@ -63,8 +63,9 @@ func NewClient(hub *Hub, conn *websocket.Conn, log log.Logger) *Client {
 func (c *Client) ReadPump(hub *Hub) {
 	defer func() {
 		c.hub.Unregister <- c
+
 		if err := c.conn.Close(); err != nil {
-			c.log.Error().Sendf("failed to close connection: %v", err)
+			c.log.Error().Sendf("read pump failed to close connection: %v", err)
 		}
 	}()
 
@@ -96,7 +97,7 @@ func (c *Client) WritePump() {
 	defer func() {
 		ticker.Stop()
 		if err := c.conn.Close(); err != nil {
-			c.log.Error().Sendf("failed to close connection: %v", err)
+			c.log.Error().Sendf("write pump failed to close connection: %v", err)
 		}
 	}()
 	for {

@@ -1,131 +1,122 @@
 <template>
-  <div>
-    <div class="content">
-      <div class="card game-table">
-        <div
-          v-if="player && player.observer && gameStarted"
-          class="notification is-info"
-        >You will automatically join in the next game.</div>
+  <div class="content">
+    <div class="card game-table">
+      <div
+        v-if="player && player.observer && gameStarted"
+        class="notification is-info"
+      >You will automatically join in the next game.</div>
 
-        <div
-          v-if="!gameStarted"
-          class="notification is-info"
-        >Waiting for players to join.</div>
+      <div v-if="!gameStarted" class="notification is-info">Waiting for players to join.</div>
 
-        <div v-if="isGameRunning && !game.winner">
-          <h4 class="title is-4">Game #{{game.gameCounter}}</h4>
-        </div>
-        <div v-if="isLoading">Loading game...</div>
+      <div v-if="isGameRunning && !game.winner">
+        <h4 class="title is-4">Game #{{game.gameCounter}}</h4>
+      </div>
+      <div v-if="isLoading">Loading game...</div>
 
-        <div v-if="game" class="card-content">
-          <div v-if="isGameRunning && !game.winner" class="notification is-black">
-            <progress
-              class="progress"
-              :value="game.roundCounter"
-              :max="game.rules.maxRoundsPerGame"
-            ></progress>
-            <div>Round: {{game.roundCounter}}/{{game.rules.maxRoundsPerGame}}</div>
-            <div>
-              Number:
-              <strong>{{game.randomNumber}}</strong>
-            </div>
+      <div v-if="game" class="card-content">
+        <div v-if="isGameRunning && !game.winner" class="notification is-black">
+          <div>Round: {{game.roundCounter}}/{{game.rules.maxRoundsPerGame}}</div>
+          <progress class="progress" :value="game.roundCounter" :max="game.rules.maxRoundsPerGame"></progress>
+          <div>
+            Drawn Number:
+            <strong class="randomNumber">{{game.randomNumber}}</strong>
           </div>
+        </div>
 
-          <div v-if="game.winner" class="notification is-black winner-notification">
-            <div>
-              <div v-if="isPlayerTheWinner()">
-                <p>
-                  Congratulations
-                  <strong>{{game.winner.name}}</strong>!
-                </p>
-                <p>YOU won game #{{game.gameCounter}} with {{game.winner.points}} points!</p>
-              </div>
-              <div v-else>
-                <div>
-                  <strong>{{game.winner.name}}</strong>
-                  is the winner of game #{{game.gameCounter}} with {{game.winner.points}} points.
-                </div>
+        <div v-if="game.winner" class="notification is-black winner-notification">
+          <div>
+            <div v-if="isPlayerTheWinner()">
+              <p>
+                Congratulations
+                <strong>{{game.winner.name}}</strong>!
+              </p>
+              <p>YOU won game #{{game.gameCounter}} with {{game.winner.points}} points!</p>
+            </div>
+            <div v-else>
+              <div>
+                <strong>{{game.winner.name}}</strong>
+                is the winner of game #{{game.gameCounter}} with {{game.winner.points}} points.
               </div>
             </div>
-            <!-- <img class="trophy" :src="trophy" alt="trophy" width="20" height="40" /> -->
           </div>
-
-          <div v-if="game.winner" class="notification is-info">
-            <p>New players will be joining now. New game commencing in few seconds...</p>
-            <progress class="progress is-small is-info" max="100"></progress>
-          </div>
-
-          <table class="table" v-if="game.gameRunning">
-            <thead>
-              <tr>
-                <th>
-                  <abbr title="Position">Pos</abbr>
-                </th>
-                <th>Player</th>
-                <th>Numbers</th>
-                <th>Points</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              <tr
-                v-for="(player,i) in leaderboard"
-                :key="player.id"
-                :class="highlightPlayer(player.id)"
-              >
-                <td>{{i+1}}</td>
-                <td>{{player.name}}</td>
-                <td>
-                  <span class="tag is-black number-tag">{{player.numbers[0]}}</span>
-                  <span class="tag is-black number-tag">{{player.numbers[1]}}</span>
-                </td>
-                <td>{{player.points}}</td>
-              </tr>
-            </tbody>
-          </table>
+          <img class="trophy" :src="trophy" alt="trophy" width="20" height="40" />
         </div>
+
+        <div v-if="game.winner" class="notification is-info">
+          <p>New players will be joining now. New game commencing in few seconds...</p>
+          <progress class="progress is-small is-link" max="100"></progress>
+        </div>
+
+        <table class="table" v-if="game.gameRunning">
+          <thead>
+            <tr>
+              <th>
+                <abbr title="Position">Pos</abbr>
+              </th>
+              <th>Player</th>
+              <th>Numbers</th>
+              <th>Points</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr
+              v-for="(player,i) in leaderboard"
+              :key="player.id"
+              :class="highlightPlayer(player.id)"
+            >
+              <td>{{i+1}}</td>
+              <td>{{player.name}}</td>
+              <td>
+                <span class="tag is-black number-tag">{{player.numbers[0]}}</span>
+                <span class="tag is-black number-tag">{{player.numbers[1]}}</span>
+              </td>
+              <td>{{player.points}}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+    </div>
 
-      <div class="card ranking-table">
-        <div>
-          <h4 class="title is-4">Overall Ranking</h4>
-        </div>
-        <div v-if="isLoading">Loading ranking...</div>
-        <div class="card-content" v-if="overallranking.length > 0">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>
-                  <abbr title="Position">Pos</abbr>
-                </th>
-                <th>Player</th>
-                <th>Won</th>
-                <th>Played</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              <tr
-                v-for="(player,i) in overallranking"
-                :key="player.id"
-                :class="highlightPlayer(player.id)"
-              >
-                <td>{{i+1}}</td>
-                <td>{{player.name}}</td>
-                <td>{{player.winners}}</td>
-                <td>{{player.gamesPlayed}}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-else>No games played yet</div>
+    <div class="card ranking-table">
+      <div>
+        <h4 class="title is-4">Overall Ranking</h4>
       </div>
+      <div v-if="isLoading">Loading ranking...</div>
+      <div class="card-content" v-if="overallranking.length > 0">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>
+                <abbr title="Position">Pos</abbr>
+              </th>
+              <th>Player</th>
+              <th>Won</th>
+              <th>Played</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr
+              v-for="(player,i) in overallranking"
+              :key="player.id"
+              :class="highlightPlayer(player.id)"
+            >
+              <td>{{i+1}}</td>
+              <td>{{player.name}}</td>
+              <td>{{player.winners}}</td>
+              <td>{{player.gamesPlayed}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else>No games played yet</div>
     </div>
   </div>
 </template>
 
 <script>
-// import trophy from "../assets/images/trophy1.svg";
+import trophy from "../assets/images/trophy1.svg";
 import { newWebsocket, getRankingSnapshot, getGameSnapshot } from "../api";
 import { mapGetters } from "vuex";
 
@@ -135,39 +126,40 @@ export default {
     overallranking: [],
     game: null,
     newGameStarting: false,
-    // trophy: trophy,
+    trophy: trophy,
     isLoading: false,
+    ws: null,
   }),
   computed: {
     ...mapGetters(["player"]),
-    gameStarted(){
+    gameStarted() {
       return this.game && this.game.gameCounter > 0;
     },
-    isGameRunning(){
-      return this.game && this.game.gameRunning
-    }
+    isGameRunning() {
+      return this.game && this.game.gameRunning;
+    },
   },
   created() {
     this.loadRankingSnapshot();
     this.loadGameSnapshot();
 
-    const ws = newWebsocket();
+    this.ws = newWebsocket();
 
-    ws.onopen = () => {
+    this.ws.onopen = () => {
       console.log("Connected to WS");
       this.$store.commit("setConnected", true);
     };
 
-    ws.onerror = () => {
+    this.ws.onerror = () => {
       console.log("Cannot connect to WS");
       this.clearData();
     };
 
-    ws.onclose = () => {
+    this.ws.onclose = () => {
       this.clearData();
     };
 
-    ws.onmessage = (evt) => {
+    this.ws.onmessage = (evt) => {
       const msg = evt.data;
 
       try {
@@ -184,8 +176,7 @@ export default {
           case "round":
             this.game = parsedMsg.data;
             this.leaderboard = parsedMsg.data.players;
-            this.isNotObserver(this.leaderboard);
-
+            this.setNotObserver(this.leaderboard);
             break;
           // case "restart":
           //   console.log("restart");
@@ -196,7 +187,6 @@ export default {
           case "end":
             this.game = parsedMsg.data;
             this.leaderboard = this.game.players;
-            console.log(this.game)
             break;
           case "overallranking":
             this.overallranking = parsedMsg.data;
@@ -208,7 +198,7 @@ export default {
     };
   },
   methods: {
-    isNotObserver(players) {
+    setNotObserver(players) {
       const meObserver = players.find((player) => {
         return (
           this.player && this.player.id === player.id && this.player.observer
@@ -255,6 +245,17 @@ export default {
       this.leaderboard = [];
       this.overallranking = [];
     },
+    closeWebsocket() {
+      console.log("closed websocket")
+      this.ws.onclose = ()=> {}; // disable onclose handler first
+      this.ws.close();
+    },
+  },
+  mounted() {
+    window.addEventListener("unload", this.closeWebsocket);
+  },
+  beforeDestroy() {
+    window.removeEventListener("unload", this.closeWebsocket);
   },
 };
 </script>
@@ -273,6 +274,7 @@ export default {
   flex-grow: 1;
   margin-right: 20px;
   min-width: 35vw;
+  min-height: 40vh;
 }
 
 .ranking-table {
@@ -280,6 +282,7 @@ export default {
   padding: 10px;
   flex-grow: 1;
   min-width: 20vw;
+  min-height: 40vh;
 }
 
 .winner-notification {
@@ -298,5 +301,11 @@ export default {
 
 .number-tag {
   margin: 1px;
+  font-weight: 700;
+}
+
+.randomNumber {
+  font-size: 20px;
+  margin-left: 10px;
 }
 </style>
