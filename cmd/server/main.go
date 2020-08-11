@@ -7,6 +7,7 @@ import (
 
 	"gitlab.com/evzpav/betting-game/internal/domain/game"
 	http "gitlab.com/evzpav/betting-game/internal/infrastructure/server/http"
+	localstorage "gitlab.com/evzpav/betting-game/internal/infrastructure/storage/localStorage"
 	"gitlab.com/evzpav/betting-game/pkg/env"
 	"gitlab.com/evzpav/betting-game/pkg/log"
 )
@@ -39,8 +40,11 @@ func main() {
 		magicNumberMatch  int = 21
 	)
 
+	// storage
+	gameStorage := localstorage.NewGameStorage(log)
+
 	// services
-	gameService := game.NewService(log)
+	gameService := game.NewService(gameStorage, log)
 	gameService.SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSeconds, magicNumberMatch)
 	gameService.Run()
 
