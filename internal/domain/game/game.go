@@ -190,10 +190,37 @@ func (s *service) stopGame(game *domain.Game) {
 		s.log.Error().Err(err).Sendf("%v", err)
 	}
 
-	time.Sleep(time.Duration(game.Rules.IntervalSeconds) * time.Second)
+	s.intervalTicker(game)
 
 	s.ResetGame(game)
 	s.startCron(game)
+}
+
+func (s *service) intervalTicker(game *domain.Game) {
+	ticker := time.NewTicker(1 * time.Second)
+	done := make(chan bool)
+
+	counter := game.Rules.IntervalSeconds + 1
+	go func(counter int) {
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				counter--
+
+				s.log.Debug().Sendf("Interval: %d", counter)
+
+				if err := s.Broadcast(domain.IntervalTickerType, counter); err != nil {
+					s.log.Error().Err(err).Sendf("%v", err)
+				}
+			}
+		}
+	}(counter)
+
+	time.Sleep(time.Duration(game.Rules.IntervalSeconds) * time.Second)
+	ticker.Stop()
+	done <- true
 }
 
 func (s *service) updateOverallRanking(game *domain.Game) domain.OverallRanking {

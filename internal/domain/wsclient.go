@@ -36,6 +36,7 @@ const (
 	StartType          MessageType = "start"
 	EndType            MessageType = "end"
 	OverallRankingType MessageType = "overallranking"
+	IntervalTickerType MessageType = "intervalTicker"
 )
 
 type Message struct {

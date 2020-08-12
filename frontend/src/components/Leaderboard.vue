@@ -41,13 +41,10 @@
           </div>
         </div>
 
-        <div v-if="game.winner" class="notification is-info">
+        <div v-if="game.winner && secondsToNextGame !== null" class="notification is-info">
+          <p>New players will be joining now.</p>
           <p>
-            New players will be joining now. New game commencing in
-            <span
-              v-if="secondsToNextGame && secondsToNextGame >= 0"
-            >{{secondsToNextGame}}</span>
-            <span v-if="secondsToNextGame === null">few</span> seconds...
+            New game commencing {{secondsToNextGame}} in seconds...
           </p>
         </div>
 
@@ -177,17 +174,20 @@ export default {
             this.leaderboard = this.game.players;
             break;
           case "round":
+            this.secondsToNextGame = null;
             this.game = parsedMsg.data;
             this.leaderboard = parsedMsg.data.players;
             this.setNotObserver(this.leaderboard);
             break;
           case "end":
-            this.countdown();
             this.game = parsedMsg.data;
             this.leaderboard = this.game.players;
             break;
           case "overallranking":
             this.overallranking = parsedMsg.data;
+            break;
+          case "intervalTicker":
+            this.secondsToNextGame = parsedMsg.data;
             break;
         }
       } catch (e) {
@@ -247,24 +247,6 @@ export default {
       console.log("closed websocket");
       this.ws.onclose = () => {}; // disable onclose handler first
       this.ws.close();
-    },
-    countdown() {
-      const secondsToNextGame = 10;
-      this.secondsToNextGame = secondsToNextGame;
-      const countDownDate = new Date().getTime() + secondsToNextGame * 1000;
-      const vm = this;
-      const x = setInterval(function () {
-        const now = new Date().getTime();
-        const distance = countDownDate - now;
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-        vm.secondsToNextGame = seconds && seconds >= 0 ? seconds : -1;
-
-        if (distance < 0) {
-          clearInterval(x);
-          return;
-        }
-      }, 1000);
     },
   },
   mounted() {
