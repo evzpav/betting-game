@@ -1,7 +1,6 @@
 <template>
   <div id="main-app">
     <nav class="navbar" role="navigation" aria-label="main navigation">
-      <!-- <div class="navbar-brand"> -->
       <div class="navbar-start">
         <router-link to="/" tag="a" class="navbar-item">
           <h1 class="title">Betting Game</h1>
@@ -27,7 +26,7 @@
         </div>
         <div class="navbar-item">
           <div id="connection-status">
-            <p v-if="connected" class="help is-success">Connected</p>
+            <p v-if="socket.isConnected" class="help is-success">Connected</p>
             <p v-else class="help is-danger">Not connected</p>
           </div>
         </div>
@@ -52,7 +51,7 @@
 import { mapGetters } from "vuex";
 export default {
   computed: {
-    ...mapGetters(["player", "connected","showStartButton"]),
+    ...mapGetters(["player", "socket","showStartButton"]),
   },
 };
 </script>

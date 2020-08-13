@@ -43,9 +43,7 @@
 
         <div v-if="game.winner && secondsToNextGame !== null" class="notification is-info">
           <p>New players will be joining now.</p>
-          <p>
-            New game commencing {{secondsToNextGame}} in seconds...
-          </p>
+          <p>New game commencing {{secondsToNextGame}} in seconds...</p>
         </div>
 
         <table class="table" v-if="game.gameRunning">
@@ -62,7 +60,7 @@
 
           <tbody>
             <tr
-              v-for="(player,i) in leaderboard"
+              v-for="(player,i) in game.players"
               :key="player.id"
               :class="highlightPlayer(player.id)"
             >
@@ -84,7 +82,7 @@
         <h4 class="title is-4">Overall Ranking</h4>
       </div>
       <div v-if="isLoading">Loading ranking...</div>
-      <div class="card-content" v-if="overallranking && overallranking.length > 0">
+      <div class="card-content" v-if="overallRanking && overallRanking.length > 0">
         <table class="table">
           <thead>
             <tr>
@@ -99,7 +97,7 @@
 
           <tbody>
             <tr
-              v-for="(player,i) in overallranking"
+              v-for="(player,i) in overallRanking"
               :key="player.id"
               :class="highlightPlayer(player.id)"
             >
@@ -117,21 +115,18 @@
 </template>
 
 <script>
-import { newWebsocket, getRankingSnapshot, getGameSnapshot } from "../api";
+import { getRankingSnapshot, getGameSnapshot } from "../api";
 import { mapGetters } from "vuex";
 
 export default {
   data: () => ({
-    leaderboard: [],
-    overallranking: [],
-    game: null,
-    newGameStarting: false,
     isLoading: false,
-    ws: null,
+    game: null,
+    overallRanking: [],
     secondsToNextGame: null,
   }),
   computed: {
-    ...mapGetters(["player"]),
+    ...mapGetters(["socket", "player"]),
     gameStarted() {
       return this.game && this.game.gameCounter > 0;
     },
@@ -143,70 +138,11 @@ export default {
     this.loadRankingSnapshot();
     this.loadGameSnapshot();
 
-    this.ws = newWebsocket();
-
-    this.ws.onopen = () => {
-      console.log("Connected to WS");
-      this.$store.commit("setConnected", true);
-    };
-
-    this.ws.onerror = () => {
-      console.log("Cannot connect to WS");
-      this.clearData();
-    };
-
-    this.ws.onclose = () => {
-      this.clearData();
-    };
-
-    this.ws.onmessage = (evt) => {
-      const msg = evt.data;
-
-      try {
-        const parsedMsg = JSON.parse(msg);
-        if (!parsedMsg.type || !parsedMsg.data) {
-          throw "failed to parse message";
-        }
-
-        switch (parsedMsg.type) {
-          case "start":
-            this.game = parsedMsg.data;
-            this.leaderboard = this.game.players;
-            break;
-          case "round":
-            this.secondsToNextGame = null;
-            this.game = parsedMsg.data;
-            this.leaderboard = parsedMsg.data.players;
-            this.setNotObserver(this.leaderboard);
-            break;
-          case "end":
-            this.game = parsedMsg.data;
-            this.leaderboard = this.game.players;
-            break;
-          case "overallranking":
-            this.overallranking = parsedMsg.data;
-            break;
-          case "intervalTicker":
-            this.secondsToNextGame = parsedMsg.data;
-            break;
-        }
-      } catch (e) {
-        console.log("catch: ", e);
-      }
-    };
+    if (!this.socket.isConnected) {
+      this.$connect();
+    }
   },
   methods: {
-    setNotObserver(players) {
-      const meObserver = players.find((player) => {
-        return (
-          this.player && this.player.id === player.id && this.player.observer
-        );
-      });
-
-      if (meObserver && !meObserver.observer) {
-        this.$store.commit("setPlayer", meObserver);
-      }
-    },
     isPlayerTheWinner() {
       return this.player && this.game && this.player.id === this.game.winner.id;
     },
@@ -214,7 +150,7 @@ export default {
       this.isLoading = true;
       try {
         const resp = await getRankingSnapshot();
-        this.overallranking = resp.data ? resp.data : [];
+        this.overallRanking = resp.data ? resp.data : [];
       } catch (error) {
         console.log(error);
       } finally {
@@ -227,7 +163,6 @@ export default {
       try {
         const resp = await getGameSnapshot();
         this.game = resp && resp.data ? resp.data : [];
-        this.leaderboard = this.game.players;
       } catch (error) {
         console.log(error);
       } finally {
@@ -237,16 +172,19 @@ export default {
     highlightPlayer(id) {
       return this.player && this.player.id === id ? "is-selected" : "";
     },
-    clearData() {
-      this.$store.commit("setConnected", false);
-      this.$store.commit("setPlayer", null);
-      this.leaderboard = [];
-      this.overallranking = [];
+    setNotObserver(player, game) {
+      if (player && player.observer && game && game.players) {
+        const meObserver = game.players.find((p) => {
+          return player.id === p.id;
+        });
+
+        if (meObserver && !meObserver.observer) {
+          this.$store.commit("setPlayer", meObserver);
+        }
+      }
     },
     closeWebsocket() {
-      console.log("closed websocket");
-      this.ws.onclose = () => {}; // disable onclose handler first
-      this.ws.close();
+      this.$disconnect();
     },
   },
   mounted() {
@@ -254,6 +192,29 @@ export default {
   },
   beforeDestroy() {
     window.removeEventListener("unload", this.closeWebsocket);
+  },
+  watch: {
+    "socket.message": function (oldVal, msg) {
+      switch (msg.type) {
+        case "start":
+          this.game = msg.data;
+          break;
+        case "round":
+          this.secondsToNextGame = null;
+          this.game = msg.data;
+          this.setNotObserver(this.player, this.game);
+          break;
+        case "end":
+          this.game = msg.data;
+          break;
+        case "overallranking":
+          this.overallRanking = msg.data;
+          break;
+        case "intervalTicker":
+          this.secondsToNextGame = msg.data;
+          break;
+      }
+    },
   },
 };
 </script>

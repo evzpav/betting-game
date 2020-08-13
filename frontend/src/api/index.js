@@ -18,6 +18,10 @@ function newWebsocket(){
 
   return  new WebSocket(`${protocol}//${config.apiUrl}/api/ws`);
 }
+function resolveWebsocketUrl(){
+  const protocol = config.protocol === "https:" ? "wss:":"ws:";
+  return `${protocol}//${config.apiUrl}/api/ws`
+}
 
 function baseRequest(method, url, uri, data = "") {
   return axios({
@@ -31,4 +35,4 @@ function baseRequest(method, url, uri, data = "") {
   });
 }
 
-export { postJoinGame, getRankingSnapshot,getGameSnapshot, newWebsocket };
+export { postJoinGame, getRankingSnapshot,getGameSnapshot, newWebsocket, resolveWebsocketUrl};

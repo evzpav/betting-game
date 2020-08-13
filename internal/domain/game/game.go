@@ -224,15 +224,15 @@ func (s *service) intervalTicker(game *domain.Game) {
 }
 
 func (s *service) updateOverallRanking(game *domain.Game) domain.OverallRanking {
-	ranking := make(map[string]domain.Player)
+	// ranking := make(map[string]domain.Player)
 
-	for _, p := range game.Players {
-		ranking[p.ID] = *p
-	}
+	// for _, p := range game.Players {
+	// 	ranking[p.ID] = *p
+	// }
 
 	var overallRanking domain.OverallRanking
-	for _, p := range ranking {
-		overallRanking = append(overallRanking, p)
+	for _, p := range game.Players {
+		overallRanking = append(overallRanking, *p)
 	}
 
 	overallRanking.SortPlayersByWinners()
