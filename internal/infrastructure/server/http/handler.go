@@ -29,7 +29,12 @@ func NewHandler(gameService domain.GameService, log log.Logger) http.Handler {
 	mux.HandleFunc("/api/game/snapshot", h.getGameSnapshot)
 	mux.HandleFunc("/api/ranking/snapshot", h.getRankingSnapshot)
 
-	return cors.Default().Handler(mux)
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{http.MethodGet, http.MethodPost},
+	})
+
+	return c.Handler(mux)
 
 }
 

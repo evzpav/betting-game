@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/gorilla/websocket"
 	"gitlab.com/evzpav/betting-game/internal/domain"
 )
 
@@ -37,7 +38,22 @@ func (h *handler) serveWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.gameService.ServeWs(w, r)
+	var upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		h.log.Error().Err(err).Sendf("%v", err)
+		return
+	}
+
+	h.gameService.AddNewWebsocketClient(conn)
+
 }
 
 func (h *handler) postJoin(w http.ResponseWriter, r *http.Request) {

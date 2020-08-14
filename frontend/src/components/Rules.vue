@@ -54,13 +54,32 @@
       <li>Highest lower number chosen</li>
       <li>Name ascending</li>
     </ul>
-
-    <router-link id="back-btn" to="/" tag="button" class="button is-danger">BACK</router-link>
+    <div class="modal">
+      <div class="modal-background"></div>
+      <div class="modal-content">
+        <!-- Any other Bulma elements you want -->
+      </div>
+      <button class="modal-close is-large" aria-label="close"></button>
+    </div>
+    <div class="buttons">
+      <router-link id="back-btn" to="/" tag="button" class="button is-warning">BACK</router-link>
+    </div>
   </div>
 </template>
 
+<script>
+
+export default {
+  data: () => ({
+
+  }),
+  methods: {
+  },
+};
+</script>
+
 <style scoped>
-#back-btn {
+.buttons {
   margin-top: 20px;
 }
 

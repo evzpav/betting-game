@@ -19,32 +19,11 @@ const store = new Vuex.Store({
     player(state) {
       return  state.player || Vue.$session.get("betting_game_player");
     },
-    connected(state) {
-      return state.socket.isConnected;
-    },
     socket(state) {
       return state.socket;
     },
-    game(state) {
-      return state.game;
-    },
-    overallRanking(state) {
-      return state.overallRanking;
-    },
-    secondsToNextGame(state) {
-      return state.secondsToNextGame
-    }
   },
   mutations: {
-    setGame(state, game) {
-      state.game = game;
-    },
-    setOverallRanking(state, overallRanking) {
-      state.overallRanking = overallRanking;
-    },
-    setSecondsToGame(state, secondsToNextGame) {
-      state.secondsToNextGame = secondsToNextGame;
-    },
     setPlayer(state, player) {
       state.player = player;
       Vue.$session.set("betting_game_player", player);
@@ -69,6 +48,8 @@ const store = new Vuex.Store({
     },
     SOCKET_ONERROR(state, event) {
       console.error(state, event)
+      state.player = null;
+      Vue.$session.remove("betting_game_player", null);
     },
     // default handler called for all methods
     SOCKET_ONMESSAGE(state, msg) {

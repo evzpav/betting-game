@@ -1,9 +1,6 @@
 package game
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -17,27 +14,18 @@ import (
 
 type service struct {
 	gameStorage domain.GameStorage
-	hub         *domain.Hub
+	hubService  domain.HubService
 	log         log.Logger
 	playersChan chan *domain.Player
 	cron        *cron.Cron
 }
 
-func newHub() *domain.Hub {
-	return &domain.Hub{
-		Broadcast:  make(chan []byte),
-		Register:   make(chan *domain.Client),
-		Unregister: make(chan *domain.Client),
-		Clients:    make(map[*domain.Client]bool),
-	}
-}
-
-func NewService(gameStorage domain.GameStorage, log log.Logger) *service {
+func NewService(gameStorage domain.GameStorage, hubService domain.HubService, log log.Logger) *service {
 	return &service{
 		gameStorage: gameStorage,
 		playersChan: make(chan *domain.Player),
-		hub:         newHub(),
-		log:         log,
+		hubService: hubService,
+		log:        log,
 	}
 }
 
@@ -48,31 +36,8 @@ func (s *service) SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSeco
 }
 
 func (s *service) Run() {
-	go s.RunHub()
+	go s.hubService.RunHub()
 	go s.WaitForPlayers()
-}
-
-func (s *service) RunHub() {
-	for {
-		select {
-		case client := <-s.hub.Register:
-			s.hub.Clients[client] = true
-		case client := <-s.hub.Unregister:
-			if _, ok := s.hub.Clients[client]; ok {
-				delete(s.hub.Clients, client)
-				close(client.Send)
-			}
-		case message := <-s.hub.Broadcast:
-			for client := range s.hub.Clients {
-				select {
-				case client.Send <- message:
-				default:
-					close(client.Send)
-					delete(s.hub.Clients, client)
-				}
-			}
-		}
-	}
 }
 
 func (s *service) WaitForPlayers() {
@@ -91,35 +56,12 @@ func (s *service) WaitForPlayers() {
 	}
 }
 
-func (s *service) Register(c *domain.Client) {
-	s.hub.Register <- c
-}
-
-func (s *service) Unregister(c *domain.Client) {
-	s.hub.Unregister <- c
-}
-
-func (s *service) Broadcast(messageType domain.MessageType, data interface{}) error {
-	var wsMessage = domain.Message{
-		MessageType: messageType,
-		Data:        data,
-	}
-
-	bs, err := json.Marshal(wsMessage)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message: %v", err)
-	}
-
-	s.hub.Broadcast <- bs
-	return nil
-}
-
 func (s *service) StartGame(game *domain.Game) {
 	s.log.Debug().Send("Start game")
 
 	s.ResetGame(game)
 
-	if err := s.Broadcast(domain.StartType, game); err != nil {
+	if err := s.hubService.Broadcast(domain.StartType, game); err != nil {
 		s.log.Error().Err(err).Sendf("%v", err)
 		return
 	}
@@ -155,7 +97,7 @@ func (s *service) runRound(game *domain.Game) {
 	game.ComputeScores(randomNumber)
 	game.SortPlayersByPoints()
 
-	if err := s.Broadcast(domain.RoundType, game); err != nil {
+	if err := s.hubService.Broadcast(domain.RoundType, game); err != nil {
 		s.log.Error().Err(err).Sendf("%v", err)
 		return
 	}
@@ -170,7 +112,7 @@ func (s *service) runRound(game *domain.Game) {
 	if winner != nil {
 		winner.Winners++
 		game.Winner = winner
-		if err := s.Broadcast(domain.EndType, game); err != nil {
+		if err := s.hubService.Broadcast(domain.EndType, game); err != nil {
 			s.log.Error().Err(err).Sendf("%v", err)
 		}
 
@@ -186,7 +128,7 @@ func (s *service) stopGame(game *domain.Game) {
 
 	ranking := s.updateOverallRanking(game)
 
-	if err := s.Broadcast(domain.OverallRankingType, ranking); err != nil {
+	if err := s.hubService.Broadcast(domain.OverallRankingType, ranking); err != nil {
 		s.log.Error().Err(err).Sendf("%v", err)
 	}
 
@@ -211,7 +153,7 @@ func (s *service) intervalTicker(game *domain.Game) {
 
 				s.log.Debug().Sendf("Interval: %d", counter)
 
-				if err := s.Broadcast(domain.IntervalTickerType, counter); err != nil {
+				if err := s.hubService.Broadcast(domain.IntervalTickerType, counter); err != nil {
 					s.log.Error().Err(err).Sendf("%v", err)
 				}
 			}
@@ -224,11 +166,6 @@ func (s *service) intervalTicker(game *domain.Game) {
 }
 
 func (s *service) updateOverallRanking(game *domain.Game) domain.OverallRanking {
-	// ranking := make(map[string]domain.Player)
-
-	// for _, p := range game.Players {
-	// 	ranking[p.ID] = *p
-	// }
 
 	var overallRanking domain.OverallRanking
 	for _, p := range game.Players {
@@ -249,36 +186,6 @@ func (s *service) ResetGame(game *domain.Game) {
 		p.Observer = false
 		p.ResetPoints()
 	}
-}
-
-func (s *service) ServeWs(w http.ResponseWriter, r *http.Request) {
-	var upgrader = websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-		CheckOrigin: func(r *http.Request) bool {
-			return true
-		},
-	}
-
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		s.log.Error().Err(err).Sendf("%v", err)
-		return
-	}
-
-	cli := domain.NewClient(s.hub, conn, s.log)
-	s.Register(cli)
-
-	s.WritePump(cli)
-	s.ReadPump(cli)
-}
-
-func (s *service) WritePump(cli *domain.Client) {
-	go cli.WritePump()
-}
-
-func (s *service) ReadPump(cli *domain.Client) {
-	go cli.ReadPump(s.hub)
 }
 
 func (s *service) Join(player domain.Player) (domain.Player, error) {
@@ -302,4 +209,8 @@ func (s *service) GetRankingSnapshot() domain.OverallRanking {
 
 func (s *service) GetGameSnapshot() domain.Game {
 	return *s.gameStorage.GetGame()
+}
+
+func (s *service) AddNewWebsocketClient(conn *websocket.Conn) {
+	s.hubService.AddNewWebsocketClient(conn)
 }

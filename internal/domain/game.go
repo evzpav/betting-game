@@ -2,8 +2,9 @@ package domain
 
 import (
 	"errors"
-	"net/http"
 	"sort"
+
+	"github.com/gorilla/websocket"
 )
 
 type Game struct {
@@ -166,15 +167,15 @@ func sortPlayersByPoints(players []*Player) {
 }
 
 type GameService interface {
-	ServeWs(w http.ResponseWriter, r *http.Request)
+	AddNewWebsocketClient(conn *websocket.Conn)
 	Run()
 	Join(Player) (Player, error)
-	GetRankingSnapshot() OverallRanking
 	GetGameSnapshot() Game
+	GetRankingSnapshot() OverallRanking
 }
 type GameStorage interface {
 	GetGame() *Game
 	SetGame(*Game)
 	GetOverallRanking() OverallRanking
-	SetOverallRanking(or OverallRanking)
+	SetOverallRanking(OverallRanking)
 }

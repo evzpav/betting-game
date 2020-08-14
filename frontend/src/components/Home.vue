@@ -44,7 +44,6 @@
 
 <script>
 import { postJoinGame } from "../api";
-import { mapGetters } from "vuex";
 
 export default {
   data: () => ({
@@ -57,9 +56,6 @@ export default {
     nameError: "",
     numberError: "",
   }),
-  computed: {
-    ...mapGetters(["player"]),
-  },
   created() {
     if (this.player) {
       this.$router.push("leaderboard");

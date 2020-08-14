@@ -29,31 +29,14 @@ var (
 	space   = []byte{' '}
 )
 
-type MessageType string
-
-const (
-	RoundType          MessageType = "round"
-	StartType          MessageType = "start"
-	EndType            MessageType = "end"
-	OverallRankingType MessageType = "overallranking"
-	IntervalTickerType MessageType = "intervalTicker"
-)
-
-type Message struct {
-	MessageType MessageType `json:"type"`
-	Data        interface{} `json:"data"`
-}
-
 type Client struct {
-	hub  *Hub
 	conn *websocket.Conn
 	Send chan []byte
 	log  log.Logger
 }
 
-func NewClient(hub *Hub, conn *websocket.Conn, log log.Logger) *Client {
+func NewClient(conn *websocket.Conn, log log.Logger) *Client {
 	return &Client{
-		hub:  hub,
 		conn: conn,
 		Send: make(chan []byte, 256),
 		log:  log,
@@ -62,7 +45,7 @@ func NewClient(hub *Hub, conn *websocket.Conn, log log.Logger) *Client {
 
 func (c *Client) ReadPump(hub *Hub) {
 	defer func() {
-		c.hub.Unregister <- c
+		hub.Unregister <- c
 
 		if err := c.conn.Close(); err != nil {
 			c.log.Error().Sendf("read pump failed to close connection: %v", err)
@@ -88,7 +71,7 @@ func (c *Client) ReadPump(hub *Hub) {
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 
-		c.hub.Broadcast <- message
+		hub.Broadcast <- message
 	}
 }
 

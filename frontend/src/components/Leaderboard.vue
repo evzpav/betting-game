@@ -173,14 +173,12 @@ export default {
       return this.player && this.player.id === id ? "is-selected" : "";
     },
     setNotObserver(player, game) {
-      if (player && player.observer && game && game.players) {
-        const meObserver = game.players.find((p) => {
-          return player.id === p.id;
-        });
+      const meObserver = game.players.find((p) => {
+        return player.id === p.id;
+      });
 
-        if (meObserver && !meObserver.observer) {
-          this.$store.commit("setPlayer", meObserver);
-        }
+      if (meObserver && !meObserver.observer) {
+        this.$store.commit("setPlayer", meObserver);
       }
     },
     closeWebsocket() {
@@ -202,7 +200,9 @@ export default {
         case "round":
           this.secondsToNextGame = null;
           this.game = msg.data;
-          this.setNotObserver(this.player, this.game);
+          if (this.player && this.player.observer && this.game && this.game.players.length > 0) {
+            this.setNotObserver(this.player, this.game);
+          }
           break;
         case "end":
           this.game = msg.data;

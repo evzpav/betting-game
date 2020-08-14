@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	"gitlab.com/evzpav/betting-game/internal/domain/game"
+	"gitlab.com/evzpav/betting-game/internal/domain/hub"
 	http "gitlab.com/evzpav/betting-game/internal/infrastructure/server/http"
 	localstorage "gitlab.com/evzpav/betting-game/internal/infrastructure/storage/localStorage"
 	"gitlab.com/evzpav/betting-game/pkg/env"
@@ -44,7 +45,8 @@ func main() {
 	gameStorage := localstorage.NewGameStorage(log)
 
 	// services
-	gameService := game.NewService(gameStorage, log)
+	hubService := hub.NewService(log)
+	gameService := game.NewService(gameStorage, hubService, log)
 	gameService.SetGameRules(minPlayersToStart, maxRoundsPerGame, intervalSeconds, magicNumberMatch)
 	gameService.Run()
 
